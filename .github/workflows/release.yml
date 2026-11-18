@@ -1,0 +1,162 @@
+name: Release
+
+# Push a tag vX.Y.Z matching VERSION in vox.pro. Runs CI, builds the source tarball, builds the AUR package from it,
+# publishes a GitHub release with the commits since the previous tag as changelog, then updates the AUR package vox.
+# Needs the AUR_SSH_PRIVATE_KEY secret; the AUR step is skipped with a warning without it.
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: Source tarball
+    needs: ci
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Version from tag
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          pro_version=$(sed -n 's/^VERSION = //p' vox.pro)
+          if [[ $version != "$pro_version" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match VERSION $pro_version in vox.pro"
+            exit 1
+          fi
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+
+      - name: Source tarball
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p dist
+          git archive --format=tar.gz --prefix="vox-$VERSION/" -o "dist/vox-$VERSION.tar.gz" "$GITHUB_SHA"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  arch:
+    name: AUR package
+    needs: build
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+
+      # The release does not exist yet, so the tarball sits next to the PKGBUILD and makepkg uses it instead of
+      # downloading; the checksum is the one AUR users will verify against the release asset.
+      - name: Generate the AUR package
+        run: |
+          src="dist/vox-$VERSION.tar.gz"
+          tools/aur-pkgbuild.sh "$VERSION" "$(sha256sum "$src" | cut -d' ' -f1)" aur/vox
+          cp "$src" aur/vox/
+
+      # Exactly what an AUR user's build does, tests in check() included.
+      - name: Build the package
+        run: |
+          pacman -Syu --noconfirm
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' >/etc/sudoers.d/builder
+          chown -R builder: aur
+          su builder -c "cd '$PWD/aur/vox' && makepkg --syncdeps --noconfirm && makepkg --printsrcinfo >.SRCINFO"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: aur
+          path: |
+            aur/*/PKGBUILD
+            aur/*/.SRCINFO
+          include-hidden-files: true
+
+  release:
+    name: GitHub release
+    needs: [build, arch]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The changelog is every commit since the previous v* tag.
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tools/release-notes.sh "$GITHUB_REF_NAME" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare" >notes.md
+          cat notes.md
+          (cd dist && sha256sum -- * >SHA256SUMS && cat SHA256SUMS)
+          gh release create "$GITHUB_REF_NAME" dist/* --title "Vox $GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+
+  aur:
+    name: Publish to AUR
+    needs: [build, release]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - name: Check for the AUR key
+        id: key
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          if [[ -z $AUR_SSH_PRIVATE_KEY ]]; then
+            echo "::warning::AUR_SSH_PRIVATE_KEY is not set; the AUR package was not updated."
+            echo "present=false" >>"$GITHUB_OUTPUT"
+          else
+            echo "present=true" >>"$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/download-artifact@v8
+        if: steps.key.outputs.present == 'true'
+        with:
+          name: aur
+          path: aur
+
+      # Host key pinned to the fingerprint published on aur.archlinux.org instead of trusting ssh-keyscan at run time.
+      - name: Push to AUR
+        if: steps.key.outputs.present == 'true'
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          install -dm700 ~/.ssh
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" >~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          echo 'aur.archlinux.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEuBKrPzbawxA/k2g6NcyV5jmqwJ2s+zpgZGZ7tpLIcN' >~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/aur -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          # Cloning a package that does not exist yet gives an empty repository; the first push creates it.
+          git clone "ssh://aur@aur.archlinux.org/vox.git" repo-vox
+          cp aur/vox/PKGBUILD aur/vox/.SRCINFO repo-vox/
+          git -C repo-vox config user.name "Koen Hendriks"
+          git -C repo-vox config user.email "info@koenhendriks.nl"
+          git -C repo-vox add PKGBUILD .SRCINFO
+          if git -C repo-vox diff --cached --quiet; then
+            echo "vox already at $VERSION"
+          else
+            git -C repo-vox commit -m "Update to $VERSION"
+            git -C repo-vox push origin HEAD:master
+          fi

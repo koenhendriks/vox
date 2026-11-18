@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
 
     QGuiApplication app(argc, argv);
     app.setApplicationName("vox");
-    app.setApplicationVersion("0.3.0");
+    app.setApplicationVersion(VOX_VERSION);
 
     // Installed before anything is translated, and every qsTr() binding is
     // re-evaluated when the Omarchy language changes.

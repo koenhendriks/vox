@@ -1,18 +1,31 @@
+# Pull requests and pushes: build and test, and build the Arch package with makepkg (which runs the tests again in
+# check()). Releases are in release.yml, which calls this workflow first.
+
 name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' || github.ref != 'refs/heads/main' }}
 
 jobs:
   build:
+    name: Build and test
     runs-on: ubuntu-latest
     container: archlinux:latest
     steps:
       - name: Install build dependencies
         run: |
           pacman -Syu --noconfirm --needed base-devel git \
-            qt6-base qt6-declarative qt6-multimedia qt6-wayland
+            qt6-base qt6-declarative qt6-multimedia qt6-svg qt6-wayland
 
       - uses: actions/checkout@v7
 
@@ -21,3 +34,30 @@ jobs:
 
       - name: Test
         run: bin/test
+
+  arch-package:
+    name: Arch package (makepkg)
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Install git
+        run: pacman -Syu --noconfirm --needed git
+
+      - uses: actions/checkout@v7
+        with:
+          # pkgver() is derived from the v* tags.
+          fetch-depth: 0
+
+      # makepkg refuses to run as root; the builder installs the PKGBUILD's own dependencies, which checks them.
+      - name: Build package
+        run: |
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' >/etc/sudoers.d/builder
+          chown -R builder: "$GITHUB_WORKSPACE"
+          su builder -c "cd '$GITHUB_WORKSPACE/pkgbuild' && makepkg --syncdeps --noconfirm"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: arch-package
+          path: pkgbuild/*.pkg.tar.zst
+          retention-days: 7

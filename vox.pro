@@ -4,6 +4,10 @@ CONFIG += c++20 release
 TARGET = vox
 TEMPLATE = app
 
+# The one place the version is set; release.yml checks the tag against it.
+VERSION = 0.3.0
+DEFINES += VOX_VERSION=\\\"$$VERSION\\\"
+
 HEADERS += \
     src/audiosystem.h \
     src/backend.h \
