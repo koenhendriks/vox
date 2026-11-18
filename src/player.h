@@ -30,6 +30,9 @@ public:
     qint64 position() const;
     qint64 length() const;
 
+    // `count` mono samples as interleaved stereo frames in `format`.
+    static QByteArray stereo(const float *samples, qint64 count, QAudioFormat::SampleFormat format);
+
 signals:
     void playingChanged();
     void positionChanged();

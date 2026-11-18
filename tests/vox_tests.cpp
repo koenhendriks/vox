@@ -11,6 +11,7 @@
 #include "fakeaudio.h"
 #include "meter.h"
 #include "pipewireaudio.h"
+#include "player.h"
 #include "take.h"
 #include "testrecorder.h"
 #include "theme.h"
@@ -369,6 +370,24 @@ private slots:
         QVERIFY(qAbs(levels.peak + 6.0206) < 0.001);
         QVERIFY(qAbs(levels.loudness + 9.0309) < 0.001);
         QCOMPARE(Take::levels({}).peak, -90.0);
+    }
+
+    void playerPlaysMonoTakesInBothChannels()
+    {
+        const float samples[3] = {0.5f, -0.25f, 2.0f};
+        const QByteArray floats = Player::stereo(samples, 3, QAudioFormat::Float);
+        QCOMPARE(floats.size(), qsizetype(6 * sizeof(float)));
+        const auto *f = reinterpret_cast<const float *>(floats.constData());
+        for (int i = 0; i < 3; ++i) {
+            QCOMPARE(f[2 * i], samples[i]);
+            QCOMPARE(f[2 * i + 1], samples[i]);
+        }
+        const QByteArray ints = Player::stereo(samples, 3, QAudioFormat::Int16);
+        const auto *n = reinterpret_cast<const qint16 *>(ints.constData());
+        QCOMPARE(n[0], qint16(16384));
+        QCOMPARE(n[1], qint16(16384));
+        QCOMPARE(n[4], qint16(32767));
+        QCOMPARE(n[5], qint16(32767));
     }
 
     void testRecordingNeedsVoxRunning()

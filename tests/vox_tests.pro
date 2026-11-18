@@ -1,4 +1,4 @@
-QT += core gui quick quickcontrols2 testlib multimedia network
+QT += core gui quick quickcontrols2 testlib multimedia network dbus
 CONFIG += c++20 testcase
 TARGET = vox_tests
 TEMPLATE = app

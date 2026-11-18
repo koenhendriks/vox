@@ -6,6 +6,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QTimer>
 #include <QUrl>
 
 #include "backend.h"
@@ -80,12 +81,19 @@ int main(int argc, char *argv[]) {
             shell.showWindow();
     });
 
-    engine.load(QUrl("qrc:/Tray.qml"));
-    if (trayOnly && !shell.trayAvailable()) {
-        std::fputs("vox: there's no system tray to show Vox in.\n", stderr);
-        return 1;
-    }
-    if (!trayOnly) {
+    // The tray goes before the engine does; its bindings read the context.
+    QObject::connect(&app, &QGuiApplication::aboutToQuit, &shell, &WindowController::destroyTray);
+    shell.watchTray();
+    if (trayOnly) {
+        // At login the tray can start ahead of the shell that hosts it; give
+        // the shell time, but don't linger unseen on a desktop without a tray.
+        QTimer::singleShot(120000, &shell, [&shell] {
+            if (shell.trayAvailable() || shell.windowVisible())
+                return;
+            std::fputs("vox: there's no system tray to show Vox in.\n", stderr);
+            QCoreApplication::exit(1);
+        });
+    } else {
         shell.showWindow();
         if (!shell.windowVisible())
             return 1;

@@ -1,4 +1,4 @@
-QT += core gui qml quick quickcontrols2 multimedia network
+QT += core gui qml quick quickcontrols2 multimedia network dbus
 
 CONFIG += c++20 release
 TARGET = vox

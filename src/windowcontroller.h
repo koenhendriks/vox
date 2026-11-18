@@ -2,7 +2,9 @@
 
 #include <QObject>
 #include <QPointer>
+#include <QTimer>
 
+class QDBusServiceWatcher;
 class QQmlApplicationEngine;
 class QQuickWindow;
 
@@ -30,12 +32,25 @@ public:
     Q_INVOKABLE void toggleWindow();
     Q_INVOKABLE void quit();
 
+    // Creates the tray icon once a tray host is up, and again after it
+    // restarts. Qt checks for a host once per process and remembers the
+    // answer, so the icon must not exist before the host does: at login Vox
+    // can start ahead of the shell that hosts the tray.
+    void watchTray();
+    void destroyTray();
+    static bool trayHostRegistered();
+
 signals:
     void trayAvailableChanged();
     void windowVisibleChanged();
 
 private:
     QQmlApplicationEngine *m_engine;
+    void createTray();
+
     QPointer<QQuickWindow> m_window;
+    QPointer<QObject> m_tray;
+    QDBusServiceWatcher *m_trayWatcher = nullptr;
+    QTimer m_hostPoll;
     bool m_trayAvailable = false;
 };
