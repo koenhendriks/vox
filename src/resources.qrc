@@ -1,0 +1,16 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="Main.qml">Main.qml</file>
+        <file alias="ControlGroup.qml">ControlGroup.qml</file>
+        <file alias="ControlSlider.qml">ControlSlider.qml</file>
+        <file alias="HelpOverlay.qml">HelpOverlay.qml</file>
+        <file alias="LevelMeter.qml">LevelMeter.qml</file>
+        <file alias="ProfileList.qml">ProfileList.qml</file>
+        <file alias="RenameDialog.qml">RenameDialog.qml</file>
+        <file alias="skill.md">skill.md</file>
+        <file alias="i18n/en.json">i18n/en.json</file>
+        <file alias="i18n/nl.json">i18n/nl.json</file>
+        <file alias="i18n/de.json">i18n/de.json</file>
+        <file alias="i18n/da.json">i18n/da.json</file>
+    </qresource>
+</RCC>

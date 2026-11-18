@@ -1,0 +1,14 @@
+[Unit]
+Description=Vox Microphone, your microphone with noise removal, EQ and compression
+After=pipewire.service wireplumber.service
+BindsTo=pipewire.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/vox engine
+Restart=on-failure
+RestartSec=2
+Slice=session.slice
+
+[Install]
+WantedBy=pipewire.service

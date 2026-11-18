@@ -1,0 +1,29 @@
+QT += core gui qml quick quickcontrols2
+
+CONFIG += c++20 release
+TARGET = vox
+TEMPLATE = app
+
+HEADERS += \
+    src/audiosystem.h \
+    src/backend.h \
+    src/chain.h \
+    src/cli.h \
+    src/config.h \
+    src/meter.h \
+    src/pipewireaudio.h \
+    src/theme.h \
+    src/translator.h
+
+SOURCES += \
+    src/main.cpp \
+    src/backend.cpp \
+    src/chain.cpp \
+    src/cli.cpp \
+    src/config.cpp \
+    src/meter.cpp \
+    src/pipewireaudio.cpp \
+    src/theme.cpp \
+    src/translator.cpp
+
+RESOURCES += src/resources.qrc

@@ -1,0 +1,19 @@
+[Desktop Entry]
+Type=Application
+Name=Vox
+Name[nl]=Vox
+Name[de]=Vox
+Name[da]=Vox
+Comment=Make your microphone sound better in every app
+Comment[nl]=Laat je microfoon beter klinken in elke app
+Comment[de]=Lass dein Mikrofon in jeder App besser klingen
+Comment[da]=Få din mikrofon til at lyde bedre i alle apps
+Keywords=microphone;voice;audio;noise;eq;compressor;mic;
+Keywords[nl]=microfoon;stem;audio;ruis;
+Keywords[de]=Mikrofon;Stimme;Audio;Rauschen;
+Keywords[da]=mikrofon;stemme;lyd;støj;
+Exec=vox
+Icon=vox
+Terminal=false
+Categories=AudioVideo;Audio;
+StartupWMClass=vox
