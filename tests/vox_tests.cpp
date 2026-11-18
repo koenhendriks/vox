@@ -15,6 +15,10 @@
 #include "testrecorder.h"
 #include "theme.h"
 #include "translator.h"
+#include "instance.h"
+#include "trayicon.h"
+#include <QImage>
+#include <QSignalSpy>
 
 class VoxTests : public QObject {
     Q_OBJECT
@@ -446,6 +450,47 @@ private slots:
         recorder.stop();
         QCOMPARE(recorder.state(), QString("idle"));
         QVERIFY(recorder.error().contains("too short"));
+    }
+
+    void trayIconsFollowStateAndAccent()
+    {
+        QTemporaryDir dir;
+        TrayIcons icons(dir.path());
+        const QUrl on = icons.source("on", "#112233");
+        const QUrl off = icons.source("off", "#112233");
+        QVERIFY(on.isLocalFile() && QFile::exists(on.toLocalFile()));
+        QVERIFY(on != off);
+        QVERIFY(icons.source("on", "#445566") != on);
+        QCOMPARE(icons.source("on", "#112233"), on);
+
+        // The middle of the mic capsule carries the color of the state.
+        const QImage onImage(on.toLocalFile()), offImage(off.toLocalFile());
+        QCOMPARE(onImage.size(), QSize(64, 64));
+        QCOMPARE(QColor(onImage.pixel(32, 20)).name(), QString("#112233"));
+        QCOMPARE(QColor(offImage.pixel(32, 30)).name(), QString("#9b9ba3"));
+        QCOMPARE(qAlpha(onImage.pixel(2, 2)), 0);
+        // The slash crosses the icon only when Vox is off.
+        QCOMPARE(qAlpha(onImage.pixel(45, 47)), 0);
+        QVERIFY(qAlpha(offImage.pixel(45, 47)) > 200);
+        // Comparing shows a hollow mic.
+        const QImage compare(icons.source("compare", "#112233").toLocalFile());
+        QCOMPARE(qAlpha(compare.pixel(32, 20)), 0);
+        QVERIFY(qAlpha(compare.pixel(25, 20)) > 200);
+    }
+
+    void secondInstanceHandsOverItsCommand()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.filePath("instance.sock");
+        Instance first(path);
+        QVERIFY(!first.send("open"));
+        QVERIFY(first.listen());
+
+        QSignalSpy spy(&first, &Instance::command);
+        Instance second(path);
+        QVERIFY(second.send("open"));
+        QVERIFY(spy.wait(2000));
+        QCOMPARE(spy.first().first().toString(), QString("open"));
     }
 
     void themeFallsBack()

@@ -102,5 +102,16 @@
   "Nothing came in from the Vox Microphone. Is it running?": "Er kwam niets binnen van de Vox Microphone. Staat hij aan?",
   "That was too short. Record at least a second.": "Dat was te kort. Neem minstens een seconde op.",
   "There are no speakers or headphones to play on.": "Er zijn geen speakers of koptelefoons om op af te spelen.",
-  "Couldn't play the recording.": "De opname kon niet worden afgespeeld."
+  "Couldn't play the recording.": "De opname kon niet worden afgespeeld.",
+  "Close the window (Vox stays in the tray)": "Venster sluiten (Vox blijft in het systeemvak)",
+  "Vox is off": "Vox staat uit",
+  "Vox is comparing: apps hear your raw microphone": "Vox vergelijkt: apps horen je onbewerkte microfoon",
+  "Vox is on with %1, as your default microphone": "Vox staat aan met %1, als je standaardmicrofoon",
+  "Vox is on with %1": "Vox staat aan met %1",
+  "On, as your default microphone": "Aan, als je standaardmicrofoon",
+  "On, not your default microphone": "Aan, niet je standaardmicrofoon",
+  "Vox Microphone on": "Vox Microphone aan",
+  "Make it the default microphone": "Maak hem de standaardmicrofoon",
+  "Open Vox": "Vox openen",
+  "Quit Vox (the microphone keeps running)": "Vox afsluiten (de microfoon blijft actief)"
 }

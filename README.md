@@ -11,6 +11,21 @@ uses it without asking.
 Profiles hold the settings. Switching profiles happens live, so the Vox
 Microphone never drops out of a call.
 
+## Tray
+
+Vox sits in the system tray, starting at login. The icon is a microphone in
+the theme's accent while the Vox Microphone is on, grey and crossed out while
+it's off, and amber while comparing with the raw microphone; hover it to see
+the profile and whether Vox is the default microphone. Its menu turns Vox on
+or off, switches profiles in one click, and makes Vox the default microphone.
+Click the icon to open or hide the window, middle-click it to turn Vox on or
+off. Closing the window, or Q, leaves Vox in the tray.
+
+Omarchy's bar puts new tray icons behind its arrow; right-click the arrow and
+pin Vox to keep it in sight. To stop the tray starting at login, copy
+`/etc/xdg/autostart/vox-tray.desktop` to `~/.config/autostart/` and add
+`Hidden=true`.
+
 ## Test recording
 
 Press **Record a test** (or T), say a few sentences, and press it again. Vox
@@ -67,13 +82,14 @@ N to make a new profile from the current one.
 | Delete | Delete profile |
 | Ctrl+Z / Ctrl+Shift+Z | Undo / redo |
 | ? | Show every shortcut |
-| Q | Quit (the Vox Microphone keeps running) |
+| Q | Close the window (Vox stays in the tray) |
 
 ## Command line
 
 Every command takes `--json`, exits 0 or 1, and writes errors to stderr.
 
 ```sh
+vox tray              # show Vox in the tray without a window
 vox status            # running, enabled, default, profile, microphone
 vox list              # the profiles, numbered
 vox use broadcast     # switch profile live, by name or number

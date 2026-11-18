@@ -25,9 +25,30 @@ ApplicationWindow {
 
     // Meters run only while the window is in front, so Vox doesn't keep the
     // microphone open in the background just to draw bars nobody sees.
-    readonly property bool metering: win.active && win.visibility !== Window.Minimized
+    readonly property bool metering: win.visible && win.active && win.visibility !== Window.Minimized
     onMeteringChanged: backend.setMetering(metering)
-    Component.onCompleted: backend.setMetering(metering)
+    Component.onCompleted: {
+        backend.setMetering(metering)
+        backend.setForeground(visible)
+    }
+
+    // With a tray icon, closing only hides the window; Vox lives on in the
+    // tray. A test in progress stops, and playback pauses.
+    onClosing: close => {
+        if (shell.trayAvailable) {
+            close.accepted = false
+            shell.hideWindow()
+        }
+    }
+    onVisibleChanged: {
+        backend.setForeground(visible)
+        if (visible)
+            return
+        if (tester.state === "recording")
+            tester.stop()
+        if (tester.playing)
+            tester.togglePlay()
+    }
 
     function showToast(text) {
         toast = text
@@ -56,7 +77,7 @@ ApplicationWindow {
 
     Shortcut { sequence: "?"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: win.helpVisible = !win.helpVisible }
     Shortcut { sequence: "Esc"; context: Qt.ApplicationShortcut; enabled: win.helpVisible || tester.state !== "idle"; onActivated: win.helpVisible ? win.helpVisible = false : tester.close() }
-    Shortcut { sequence: "Q"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: Qt.quit() }
+    Shortcut { sequence: "Q"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: shell.hideWindow() }
     Shortcut { sequence: "Space"; context: Qt.ApplicationShortcut; enabled: !win.typing && tester.state !== "recording"; onActivated: backend.toggleBypass() }
     Shortcut { sequence: "T"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: tester.toggleRecording() }
     Shortcut { sequence: "P"; context: Qt.ApplicationShortcut; enabled: !win.typing && tester.state === "ready"; onActivated: tester.togglePlay() }

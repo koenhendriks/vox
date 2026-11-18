@@ -24,7 +24,7 @@ Rectangle {
         ["Ctrl+Z", qsTr("Undo")],
         ["Ctrl+Shift+Z", qsTr("Redo")],
         ["?", qsTr("Show or hide shortcuts")],
-        ["Q", qsTr("Quit (Vox keeps running)")],
+        ["Q", shell.trayAvailable ? qsTr("Close the window (Vox stays in the tray)") : qsTr("Quit (Vox keeps running)")],
     ]
 
     MouseArea { anchors.fill: parent; onClicked: overlay.closeRequested() }

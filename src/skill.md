@@ -21,7 +21,8 @@ errors to stderr.
 | `vox use <name or number>` | Switch profile live (and for the next start) |
 | `vox on` / `vox off` | Start or stop the Vox Microphone, now and at login |
 | `vox default` | Make the Vox Microphone the default microphone |
-| `vox open` | Open the window (needs a display) |
+| `vox open` | Open the window (needs a display); hands over to a running Vox |
+| `vox tray` | Show the tray icon without the window (runs at login) |
 
 Profiles are stored in `~/.config/vox/config.json`. Prefer `vox use` over
 editing it, and never edit `~/.local/state/vox/pipewire.conf`, which the

@@ -17,8 +17,12 @@ PipeWireAudio::PipeWireAudio(QObject *parent) : AudioSystem(parent) {
 }
 
 PipeWireAudio::~PipeWireAudio() {
-    for (auto *process : std::as_const(m_captures))
+    for (auto *process : findChildren<QProcess *>(Qt::FindDirectChildrenOnly)) {
+        if (process == &m_loopback || process->state() == QProcess::NotRunning)
+            continue;
         process->kill();
+        process->waitForFinished(200);
+    }
     stopMetering();
     setListening(false);
 }

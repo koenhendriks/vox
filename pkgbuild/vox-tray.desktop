@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=Vox tray
+Name[nl]=Vox-systeemvak
+Name[de]=Vox-Tray
+Name[da]=Vox i statusområdet
+Comment=Show whether the Vox Microphone is on, and switch voice profiles
+Comment[nl]=Laat zien of de Vox Microphone aan staat, en wissel van stemprofiel
+Comment[de]=Zeigt, ob das Vox Microphone an ist, und wechselt Stimmprofile
+Comment[da]=Vis om Vox Microphone er tændt, og skift stemmeprofil
+Exec=vox tray
+Icon=vox
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

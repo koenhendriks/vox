@@ -102,5 +102,16 @@
   "Nothing came in from the Vox Microphone. Is it running?": "Der kom intet fra Vox Microphone. Kører den?",
   "That was too short. Record at least a second.": "Det var for kort. Optag mindst et sekund.",
   "There are no speakers or headphones to play on.": "Der er ingen højttalere eller hovedtelefoner at afspille på.",
-  "Couldn't play the recording.": "Optagelsen kunne ikke afspilles."
+  "Couldn't play the recording.": "Optagelsen kunne ikke afspilles.",
+  "Close the window (Vox stays in the tray)": "Luk vinduet (Vox bliver i statusområdet)",
+  "Vox is off": "Vox er slukket",
+  "Vox is comparing: apps hear your raw microphone": "Vox sammenligner: apps hører din ubehandlede mikrofon",
+  "Vox is on with %1, as your default microphone": "Vox er tændt med %1, som din standardmikrofon",
+  "Vox is on with %1": "Vox er tændt med %1",
+  "On, as your default microphone": "Tændt, som din standardmikrofon",
+  "On, not your default microphone": "Tændt, ikke din standardmikrofon",
+  "Vox Microphone on": "Vox Microphone tændt",
+  "Make it the default microphone": "Gør den til standardmikrofon",
+  "Open Vox": "Åbn Vox",
+  "Quit Vox (the microphone keeps running)": "Afslut Vox (mikrofonen kører videre)"
 }

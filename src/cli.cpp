@@ -62,6 +62,7 @@ QString usage() {
               "\n"
               "Window:\n"
               "  open                Open Vox (the default)\n"
+              "  tray                Show Vox in the tray without opening the window\n"
               "\n"
               "Commands that need no display:\n"
               "  status              Whether Vox is running, and with which profile and microphone\n"
@@ -281,13 +282,13 @@ namespace Cli {
 
 bool wantsWindow(const QStringList &arguments) {
     const QStringList rest = arguments.mid(1);
-    return rest.isEmpty() || rest.first() == "open";
+    return rest.isEmpty() || rest.first() == "open" || rest.first() == "tray";
 }
 
 int run(const QStringList &arguments) {
     QStringList rest = arguments.mid(1);
     const bool json = rest.removeAll("--json") > 0;
-    if (rest.isEmpty() || rest.first() == "open")
+    if (rest.isEmpty() || rest.first() == "open" || rest.first() == "tray")
         return -1;
     const QString command = rest.takeFirst();
 

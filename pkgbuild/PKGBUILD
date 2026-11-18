@@ -1,5 +1,5 @@
 pkgname=vox
-pkgver=0.2.0
+pkgver=0.3.0
 pkgrel=1
 pkgdesc='Make your microphone sound better in every app, with switchable voice profiles'
 arch=('x86_64' 'aarch64')
@@ -22,4 +22,5 @@ package() {
   install -Dm644 "$startdir/vox.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/vox.svg"
   install -Dm644 "$startdir/vox.desktop" "$pkgdir/usr/share/applications/vox.desktop"
   install -Dm644 "$startdir/vox.service" "$pkgdir/usr/lib/systemd/user/vox.service"
+  install -Dm644 "$startdir/vox-tray.desktop" "$pkgdir/etc/xdg/autostart/vox-tray.desktop"
 }

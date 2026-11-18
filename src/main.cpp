@@ -10,10 +10,15 @@
 
 #include "backend.h"
 #include "cli.h"
+#include "instance.h"
 #include "pipewireaudio.h"
 #include "testrecorder.h"
 #include "theme.h"
 #include "translator.h"
+#include "trayicon.h"
+#include "windowcontroller.h"
+
+#include <cstdio>
 
 int main(int argc, char *argv[]) {
     QStringList arguments;
@@ -27,7 +32,7 @@ int main(int argc, char *argv[]) {
 
     QGuiApplication app(argc, argv);
     app.setApplicationName("vox");
-    app.setApplicationVersion("0.2.0");
+    app.setApplicationVersion("0.3.0");
 
     // Installed before anything is translated, and every qsTr() binding is
     // re-evaluated when the Omarchy language changes.
@@ -41,6 +46,15 @@ int main(int argc, char *argv[]) {
     // and the launcher pick up the installed icon.
     app.setDesktopFileName("vox");
     app.setWindowIcon(QIcon::fromTheme("vox"));
+    // The tray icon keeps Vox running with no window open.
+    app.setQuitOnLastWindowClosed(false);
+
+    const bool trayOnly = arguments.value(1) == "tray";
+    Instance instance;
+    if (instance.send(trayOnly ? "tray" : "open"))
+        return 0;
+    if (!instance.listen())
+        qWarning("vox: couldn't listen at %s, so a second Vox may start", qPrintable(Instance::defaultSocketPath()));
 
     QQuickStyle::setStyle("Material");
 
@@ -48,17 +62,34 @@ int main(int argc, char *argv[]) {
     PipeWireAudio audio;
     Backend backend(&audio);
     TestRecorder tester(&audio, &backend);
+    TrayIcons trayIcons;
     QObject::connect(&app, &QGuiApplication::aboutToQuit, &backend, &Backend::shutdown);
 
+    WindowController shell;
     QQmlApplicationEngine engine;
+    shell.setEngine(&engine);
     QObject::connect(&translator, &Translator::changed, &engine, &QQmlEngine::retranslate);
     engine.rootContext()->setContextProperty("translator", &translator);
     engine.rootContext()->setContextProperty("theme", &theme);
     engine.rootContext()->setContextProperty("backend", &backend);
     engine.rootContext()->setContextProperty("tester", &tester);
-    engine.load(QUrl("qrc:/Main.qml"));
-    if (engine.rootObjects().isEmpty())
+    engine.rootContext()->setContextProperty("trayIcons", &trayIcons);
+    engine.rootContext()->setContextProperty("shell", &shell);
+    QObject::connect(&instance, &Instance::command, &shell, [&shell](const QString &command) {
+        if (command == "open")
+            shell.showWindow();
+    });
+
+    engine.load(QUrl("qrc:/Tray.qml"));
+    if (trayOnly && !shell.trayAvailable()) {
+        std::fputs("vox: there's no system tray to show Vox in.\n", stderr);
         return 1;
+    }
+    if (!trayOnly) {
+        shell.showWindow();
+        if (!shell.windowVisible())
+            return 1;
+    }
 
     return app.exec();
 }

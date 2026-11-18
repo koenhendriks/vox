@@ -127,6 +127,12 @@ void Backend::refresh() {
     m_audio->refresh();
 }
 
+void Backend::setForeground(bool foreground) {
+    m_poll.setInterval(foreground ? 2000 : 10000);
+    if (foreground)
+        refresh();
+}
+
 void Backend::setStatus(const AudioStatus &status) {
     const bool wasRunning = m_status.running;
     const bool changedStatus = !m_ready || !(status == m_status);

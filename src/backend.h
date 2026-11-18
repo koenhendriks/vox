@@ -75,6 +75,9 @@ public:
     Q_INVOKABLE void setMetering(bool on);
     Q_INVOKABLE void dismissProblem();
     Q_INVOKABLE void refresh();
+    // With no window open, the status only feeds the tray and is checked less
+    // often; the tray menu refreshes it before it opens.
+    Q_INVOKABLE void setForeground(bool foreground);
 
     // Saves and takes the graph out of compare mode, before the app quits.
     void shutdown();
