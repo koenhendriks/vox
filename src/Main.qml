@@ -55,9 +55,12 @@ ApplicationWindow {
     readonly property bool typing: renameDialog.visible
 
     Shortcut { sequence: "?"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: win.helpVisible = !win.helpVisible }
-    Shortcut { sequence: "Esc"; context: Qt.ApplicationShortcut; enabled: win.helpVisible; onActivated: win.helpVisible = false }
+    Shortcut { sequence: "Esc"; context: Qt.ApplicationShortcut; enabled: win.helpVisible || tester.state !== "idle"; onActivated: win.helpVisible ? win.helpVisible = false : tester.close() }
     Shortcut { sequence: "Q"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: Qt.quit() }
-    Shortcut { sequence: "Space"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: backend.toggleBypass() }
+    Shortcut { sequence: "Space"; context: Qt.ApplicationShortcut; enabled: !win.typing && tester.state !== "recording"; onActivated: backend.toggleBypass() }
+    Shortcut { sequence: "T"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: tester.toggleRecording() }
+    Shortcut { sequence: "P"; context: Qt.ApplicationShortcut; enabled: !win.typing && tester.state === "ready"; onActivated: tester.togglePlay() }
+    Shortcut { sequence: "Tab"; context: Qt.ApplicationShortcut; enabled: !win.typing && tester.state === "ready"; onActivated: tester.switchTrack() }
     Shortcut { sequence: "L"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: backend.toggleListening() }
     Shortcut { sequence: "O"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: backend.setRunning(!backend.running) }
     Shortcut { sequence: "D"; context: Qt.ApplicationShortcut; enabled: !win.typing && backend.running; onActivated: backend.makeDefault() }
@@ -200,6 +203,20 @@ ApplicationWindow {
                         spacing: 16
 
                         Item { Layout.preferredHeight: 4 }
+
+                        TestPanel {
+                            visible: tester.state !== "idle"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            Layout.fillWidth: true
+                        }
+                        Connections {
+                            target: tester
+                            function onStateChanged() {
+                                if (tester.state === "recording")
+                                    scroller.contentItem.contentY = 0
+                            }
+                        }
 
                         GridLayout {
                             Layout.leftMargin: 24
@@ -366,6 +383,14 @@ ApplicationWindow {
                         focusPolicy: Qt.NoFocus
                         onClicked: backend.toggleBypass()
                     }
+                    Button {
+                        text: tester.state === "recording" ? qsTr("Stop recording") : qsTr("Record a test")
+                        enabled: backend.running
+                        focusPolicy: Qt.NoFocus
+                        Material.background: tester.state === "recording" ? "#e5484d" : "#232328"
+                        Material.foreground: "#f2f2f4"
+                        onClicked: tester.toggleRecording()
+                    }
                     Label {
                         visible: backend.listening
                         text: qsTr("Use headphones, or your speakers will echo.")
@@ -373,10 +398,13 @@ ApplicationWindow {
                         elide: Text.ElideRight
                         Layout.fillWidth: true
                     }
-                    Item { Layout.fillWidth: true; visible: !backend.listening }
                     Label {
+                        visible: !backend.listening
                         text: qsTr("Press ? for shortcuts")
                         color: win.dim
+                        elide: Text.ElideRight
+                        horizontalAlignment: Text.AlignRight
+                        Layout.fillWidth: true
                     }
                 }
             }

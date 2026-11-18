@@ -1,4 +1,4 @@
-QT += core gui qml quick quickcontrols2
+QT += core gui qml quick quickcontrols2 multimedia
 
 CONFIG += c++20 release
 TARGET = vox
@@ -12,6 +12,9 @@ HEADERS += \
     src/config.h \
     src/meter.h \
     src/pipewireaudio.h \
+    src/player.h \
+    src/take.h \
+    src/testrecorder.h \
     src/theme.h \
     src/translator.h
 
@@ -23,6 +26,9 @@ SOURCES += \
     src/config.cpp \
     src/meter.cpp \
     src/pipewireaudio.cpp \
+    src/player.cpp \
+    src/take.cpp \
+    src/testrecorder.cpp \
     src/theme.cpp \
     src/translator.cpp
 

@@ -1,10 +1,10 @@
 pkgname=vox
-pkgver=0.1.0
+pkgver=0.2.0
 pkgrel=1
 pkgdesc='Make your microphone sound better in every app, with switchable voice profiles'
 arch=('x86_64' 'aarch64')
 license=('MIT')
-depends=('qt6-base' 'qt6-declarative' 'qt6-wayland' 'pipewire' 'pipewire-pulse' 'libpulse'
+depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-wayland' 'pipewire' 'pipewire-pulse' 'libpulse'
          'swh-plugins' 'noise-suppression-for-voice')
 makedepends=('gcc' 'make')
 source=()

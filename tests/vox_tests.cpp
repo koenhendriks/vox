@@ -11,6 +11,8 @@
 #include "fakeaudio.h"
 #include "meter.h"
 #include "pipewireaudio.h"
+#include "take.h"
+#include "testrecorder.h"
 #include "theme.h"
 #include "translator.h"
 
@@ -325,6 +327,127 @@ private slots:
         QCOMPARE(audio.applied.last(), Chain::pod(Chain::params(changed.current())));
     }
 
+    void alignmentFindsTheDelay()
+    {
+        // Bursts of noise with gaps, like speech, and a copy that trails it
+        // by 37 ms and has its level changed, like Vox's output.
+        const QVector<float> speech = syllables(3 * Take::Rate);
+        const qint64 delay = Take::Rate * 37 / 1000;
+        QVector<float> late(delay, 0.0f);
+        for (float s : speech)
+            late << s * 2.5f;
+        QVERIFY(qAbs(Take::lag(speech, late) - delay) <= Take::Rate / 1000);
+        QVERIFY(qAbs(Take::lag(late, speech) + delay) <= Take::Rate / 1000);
+
+        QVector<float> raw = speech, vox = late;
+        Take::align(raw, vox);
+        QCOMPARE(raw.size(), vox.size());
+        QVERIFY(qAbs(Take::lag(raw, vox)) <= Take::Rate / 1000);
+    }
+
+    void alignmentLeavesUnrelatedTakesAlone()
+    {
+        const QVector<float> silence(Take::Rate, 0.0f);
+        QCOMPARE(Take::lag(silence, syllables(Take::Rate)), qint64(0));
+    }
+
+    void curveAndLevelsUseDecibels()
+    {
+        QVector<float> samples(1000, 0.0f);
+        for (int i = 500; i < 1000; ++i)
+            samples[i] = (i % 2 ? 0.5f : -0.5f);
+        const QVector<float> curve = Take::curve(samples, 2);
+        QCOMPARE(curve.size(), 2);
+        QCOMPARE(curve[0], 0.0f);
+        QVERIFY(qAbs(curve[1] - float((60 - 6.0206) / 60)) < 0.001f);
+
+        const Take::Levels levels = Take::levels(samples);
+        QVERIFY(qAbs(levels.peak + 6.0206) < 0.001);
+        QVERIFY(qAbs(levels.loudness + 9.0309) < 0.001);
+        QCOMPARE(Take::levels({}).peak, -90.0);
+    }
+
+    void testRecordingNeedsVoxRunning()
+    {
+        QTemporaryDir dir;
+        FakeAudio audio;
+        audio.status = FakeAudio::sample();
+        Backend backend(&audio, dir.filePath("config.json"), plugins(dir));
+        TestRecorder recorder(&audio, &backend);
+        recorder.record();
+        QCOMPARE(recorder.state(), QString("idle"));
+        QVERIFY(recorder.error().contains("Turn on"));
+        QVERIFY(audio.captureTargets.isEmpty());
+    }
+
+    void testRecordingCapturesBothAndLinesThemUp()
+    {
+        QTemporaryDir dir;
+        FakeAudio audio;
+        audio.status = FakeAudio::sample();
+        audio.status.running = true;
+        Backend backend(&audio, dir.filePath("config.json"), plugins(dir));
+        backend.selectProfile(1);
+        backend.toggleBypass();
+        TestRecorder recorder(&audio, &backend);
+
+        recorder.record();
+        QCOMPARE(recorder.state(), QString("recording"));
+        QCOMPARE(audio.captureTargets, QStringList({"alsa_input.usb-studio", QString(Chain::SourceName)}));
+        QVERIFY2(!backend.bypass(), "compare mode would make both recordings raw");
+
+        const QVector<float> speech = syllables(2 * Take::Rate);
+        QVector<float> vox(Take::Rate / 50, 0.0f);
+        for (float s : speech)
+            vox << s * 2;
+        audio.nextCapture = {bytes(speech), bytes(vox)};
+        recorder.stop();
+
+        QCOMPARE(recorder.state(), QString("ready"));
+        QCOMPARE(recorder.profileName(), backend.profileNames().at(1));
+        QCOMPARE(recorder.raw().size(), recorder.vox().size());
+        QVERIFY(recorder.duration() > 1.9);
+        QCOMPARE(recorder.rawCurve().size(), TestRecorder::CurvePoints);
+        QVERIFY(recorder.voxPeak() > recorder.rawPeak());
+        QCOMPARE(recorder.track(), 0);
+        recorder.switchTrack();
+        QCOMPARE(recorder.track(), 1);
+
+        recorder.close();
+        QCOMPARE(recorder.state(), QString("idle"));
+    }
+
+    void testRecordingReportsSilenceFromVox()
+    {
+        QTemporaryDir dir;
+        FakeAudio audio;
+        audio.status = FakeAudio::sample();
+        audio.status.running = true;
+        Backend backend(&audio, dir.filePath("config.json"), plugins(dir));
+        TestRecorder recorder(&audio, &backend);
+        recorder.record();
+        audio.nextCapture = {bytes(syllables(Take::Rate * 2)), QByteArray()};
+        recorder.stop();
+        QCOMPARE(recorder.state(), QString("idle"));
+        QVERIFY(recorder.error().contains("Vox Microphone"));
+    }
+
+    void testRecordingRejectsTooShortTakes()
+    {
+        QTemporaryDir dir;
+        FakeAudio audio;
+        audio.status = FakeAudio::sample();
+        audio.status.running = true;
+        Backend backend(&audio, dir.filePath("config.json"), plugins(dir));
+        TestRecorder recorder(&audio, &backend);
+        recorder.record();
+        const QVector<float> blip = syllables(Take::Rate / 4);
+        audio.nextCapture = {bytes(blip), bytes(blip)};
+        recorder.stop();
+        QCOMPARE(recorder.state(), QString("idle"));
+        QVERIFY(recorder.error().contains("too short"));
+    }
+
     void themeFallsBack()
     {
         QTemporaryDir dir;
@@ -416,6 +539,31 @@ private slots:
     }
 
 private:
+    // Deterministic noise bursts of uneven length with gaps between them.
+    static QVector<float> syllables(qsizetype length)
+    {
+        QVector<float> samples(length, 0.0f);
+        quint32 seed = 12345;
+        qsizetype i = 0;
+        int burst = 0;
+        while (i < length) {
+            const qsizetype on = Take::Rate * (80 + (burst * 37) % 170) / 1000;
+            const qsizetype off = Take::Rate * (40 + (burst * 53) % 120) / 1000;
+            for (qsizetype j = 0; j < on && i < length; ++j, ++i) {
+                seed = seed * 1664525u + 1013904223u;
+                samples[i] = (float(seed >> 8) / float(1 << 24) - 0.5f) * 0.4f;
+            }
+            i += off;
+            ++burst;
+        }
+        return samples;
+    }
+
+    static QByteArray bytes(const QVector<float> &samples)
+    {
+        return QByteArray(reinterpret_cast<const char *>(samples.constData()), samples.size() * sizeof(float));
+    }
+
     // A plugin directory with every LADSPA plugin Vox needs, so the window
     // reports the problem under test and not missing packages.
     static QStringList plugins(const QTemporaryDir &dir)

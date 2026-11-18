@@ -7,6 +7,8 @@
         <file alias="LevelMeter.qml">LevelMeter.qml</file>
         <file alias="ProfileList.qml">ProfileList.qml</file>
         <file alias="RenameDialog.qml">RenameDialog.qml</file>
+        <file alias="TestPanel.qml">TestPanel.qml</file>
+        <file alias="WaveformTrack.qml">WaveformTrack.qml</file>
         <file alias="skill.md">skill.md</file>
         <file alias="i18n/en.json">i18n/en.json</file>
         <file alias="i18n/nl.json">i18n/nl.json</file>

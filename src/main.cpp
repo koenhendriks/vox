@@ -11,6 +11,7 @@
 #include "backend.h"
 #include "cli.h"
 #include "pipewireaudio.h"
+#include "testrecorder.h"
 #include "theme.h"
 #include "translator.h"
 
@@ -26,7 +27,7 @@ int main(int argc, char *argv[]) {
 
     QGuiApplication app(argc, argv);
     app.setApplicationName("vox");
-    app.setApplicationVersion("0.1.0");
+    app.setApplicationVersion("0.2.0");
 
     // Installed before anything is translated, and every qsTr() binding is
     // re-evaluated when the Omarchy language changes.
@@ -46,6 +47,7 @@ int main(int argc, char *argv[]) {
     Theme theme;
     PipeWireAudio audio;
     Backend backend(&audio);
+    TestRecorder tester(&audio, &backend);
     QObject::connect(&app, &QGuiApplication::aboutToQuit, &backend, &Backend::shutdown);
 
     QQmlApplicationEngine engine;
@@ -53,6 +55,7 @@ int main(int argc, char *argv[]) {
     engine.rootContext()->setContextProperty("translator", &translator);
     engine.rootContext()->setContextProperty("theme", &theme);
     engine.rootContext()->setContextProperty("backend", &backend);
+    engine.rootContext()->setContextProperty("tester", &tester);
     engine.load(QUrl("qrc:/Main.qml"));
     if (engine.rootObjects().isEmpty())
         return 1;

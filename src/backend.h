@@ -70,6 +70,7 @@ public:
     Q_INVOKABLE void setRunning(bool running);
     Q_INVOKABLE void makeDefault();
     Q_INVOKABLE void toggleBypass();
+    void setBypass(bool bypass);
     Q_INVOKABLE void toggleListening();
     Q_INVOKABLE void setMetering(bool on);
     Q_INVOKABLE void dismissProblem();

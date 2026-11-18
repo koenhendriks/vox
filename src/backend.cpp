@@ -329,7 +329,13 @@ void Backend::makeDefault() {
 }
 
 void Backend::toggleBypass() {
-    m_bypass = !m_bypass;
+    setBypass(!m_bypass);
+}
+
+void Backend::setBypass(bool bypass) {
+    if (bypass == m_bypass)
+        return;
+    m_bypass = bypass;
     emit bypassChanged();
     applyLive();
 }

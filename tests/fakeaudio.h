@@ -16,6 +16,8 @@ public:
     int restarts = 0;
     bool listening = false;
     QString meteredMicrophone;
+    QStringList captureTargets;
+    QList<QByteArray> nextCapture;
 
     void refresh() override { emit statusChanged(status); }
     void setRunning(bool running) override {
@@ -36,6 +38,11 @@ public:
     }
     void setMetering(const QString &microphone, bool) override { meteredMicrophone = microphone; }
     void stopMetering() override { meteredMicrophone.clear(); }
+    void startCapture(const QStringList &targets) override { captureTargets = targets; }
+    void stopCapture() override {
+        captureTargets.clear();
+        emit captured(nextCapture);
+    }
 
     static AudioStatus sample() {
         AudioStatus s;

@@ -24,6 +24,8 @@ public:
     void setMetering(const QString &microphone, bool voxRunning) override;
     void stopMetering() override;
     void finish() override;
+    void startCapture(const QStringList &targets) override;
+    void stopCapture() override;
 
     static QStringList applyArguments(const QString &pod);
     static AudioStatus parseStatus(const QByteArray &systemctlShow, const QByteArray &defaultSource,
@@ -37,6 +39,8 @@ private:
     QString m_pendingPod;
     bool m_applying = false;
     bool m_refreshing = false;
+    QList<QProcess *> m_captures;
+    QList<QByteArray> m_captureData;
     QProcess m_loopback;
     Meter m_micMeter, m_voxMeter;
 };

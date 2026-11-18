@@ -1,6 +1,6 @@
 # Vox
 
-![Vox with the Broadcast profile](docs/screenshot.png)
+![Vox with a test recording of the Broadcast profile](docs/screenshot.png)
 
 Vox makes your microphone sound better in every app. It runs your voice
 through noise removal, a tone EQ, a compressor and a limiter, and offers the
@@ -10,6 +10,16 @@ uses it without asking.
 
 Profiles hold the settings. Switching profiles happens live, so the Vox
 Microphone never drops out of a call.
+
+## Test recording
+
+Press **Record a test** (or T), say a few sentences, and press it again. Vox
+records your raw microphone and the Vox Microphone at the same moment, so both
+takes hold exactly the same words, and lines them up to
+take out Vox's own processing delay. The player draws both as level curves
+with one playhead: click a curve to hear that version from that point, or
+press Tab while it plays to switch between raw and Vox without losing your
+place. Recordings stay in memory and stop after 30 seconds.
 
 ## How it works
 
@@ -44,6 +54,10 @@ N to make a new profile from the current one.
 | --- | --- |
 | Space | Compare with your raw microphone |
 | L | Listen to yourself (use headphones) |
+| T | Record a test, or stop recording |
+| P | Play or pause the test |
+| Tab | Switch between raw and Vox in the test |
+| Esc | Close the test |
 | O | Turn the Vox Microphone on or off |
 | D | Make Vox the default microphone |
 | 1 to 9 | Switch profile |

@@ -10,6 +10,10 @@ Rectangle {
     readonly property var shortcuts: [
         ["Space", qsTr("Compare with your raw microphone")],
         ["L", qsTr("Listen to yourself")],
+        ["T", qsTr("Record a test, or stop recording")],
+        ["P", qsTr("Play or pause the test")],
+        ["Tab", qsTr("Switch between raw and Vox in the test")],
+        ["Esc", qsTr("Close the test")],
         ["O", qsTr("Turn the Vox Microphone on or off")],
         ["D", qsTr("Make Vox the default microphone")],
         ["1 – 9", qsTr("Switch profile")],
@@ -37,7 +41,7 @@ Rectangle {
             id: content
             anchors.fill: parent
             anchors.margins: 24
-            spacing: 10
+            spacing: 6
 
             Label {
                 text: qsTr("Keyboard shortcuts")
@@ -53,7 +57,7 @@ Rectangle {
                     spacing: 16
                     Rectangle {
                         Layout.preferredWidth: 120
-                        Layout.preferredHeight: 26
+                        Layout.preferredHeight: 24
                         radius: Math.min(4, theme.radius)
                         color: "#24242a"
                         Label {

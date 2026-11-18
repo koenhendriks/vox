@@ -5,6 +5,7 @@
 #include <QJsonObject>
 
 #include "chain.h"
+#include "take.h"
 
 PipeWireAudio::PipeWireAudio(QObject *parent) : AudioSystem(parent) {
     auto emitLevels = [this] { emit levels(m_micMeter.level(), m_voxMeter.level()); };
@@ -16,6 +17,8 @@ PipeWireAudio::PipeWireAudio(QObject *parent) : AudioSystem(parent) {
 }
 
 PipeWireAudio::~PipeWireAudio() {
+    for (auto *process : std::as_const(m_captures))
+        process->kill();
     stopMetering();
     setListening(false);
 }
@@ -173,4 +176,46 @@ void PipeWireAudio::setMetering(const QString &microphone, bool voxRunning) {
 void PipeWireAudio::stopMetering() {
     m_micMeter.stop();
     m_voxMeter.stop();
+}
+
+void PipeWireAudio::startCapture(const QStringList &targets) {
+    for (auto *process : std::exchange(m_captures, {})) {
+        process->kill();
+        process->deleteLater();
+    }
+    m_captureData.clear();
+    for (int i = 0; i < targets.size(); ++i) {
+        auto *process = new QProcess(this);
+        m_captures << process;
+        m_captureData << QByteArray();
+        connect(process, &QProcess::readyReadStandardOutput, this, [this, process, i] {
+            if (i < m_captureData.size())
+                m_captureData[i] += process->readAllStandardOutput();
+        });
+        // Both recordings start together; Take::align removes what's left of
+        // the difference, and the latency of Vox's own processing.
+        process->start("pw-record", {"--target", targets[i], "--rate", QString::number(Take::Rate), "--channels",
+                                     "1", "--format", "f32", "--raw",
+                                     "-P", "{ node.dont-fallback = true node.dont-reconnect = true "
+                                           "node.description = \"Vox test recording\" }",
+                                     "-"});
+    }
+}
+
+void PipeWireAudio::stopCapture() {
+    QList<QByteArray> buffers;
+    for (int i = 0; i < m_captures.size(); ++i) {
+        QProcess *process = m_captures[i];
+        process->terminate();
+        if (!process->waitForFinished(1000))
+            process->kill();
+        m_captureData[i] += process->readAllStandardOutput();
+        // pw-record writes whole samples, but a kill can cut one short.
+        m_captureData[i].truncate(m_captureData[i].size() / 4 * 4);
+        buffers << m_captureData[i];
+        process->deleteLater();
+    }
+    m_captures.clear();
+    m_captureData.clear();
+    emit captured(buffers);
 }
