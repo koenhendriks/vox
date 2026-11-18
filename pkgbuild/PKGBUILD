@@ -7,7 +7,7 @@
 # release tarball, pins the version and checksum and drops pkgver(). Keep build steps in terms of $_src.
 
 pkgname=vox
-pkgver=0.3.0
+pkgver=0.3.1
 pkgrel=1
 pkgdesc='Make your microphone sound better in every app, with switchable voice profiles'
 arch=('x86_64' 'aarch64')
