@@ -16,6 +16,7 @@
 #include "testrecorder.h"
 #include "theme.h"
 #include "translator.h"
+#include "version.h"
 #include "trayicon.h"
 #include "windowcontroller.h"
 
