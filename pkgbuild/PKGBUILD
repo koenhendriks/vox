@@ -2,6 +2,7 @@ pkgname=vox
 pkgver=0.3.0
 pkgrel=1
 pkgdesc='Make your microphone sound better in every app, with switchable voice profiles'
+url='https://github.com/koenhendriks/vox'
 arch=('x86_64' 'aarch64')
 license=('MIT')
 depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-wayland' 'pipewire' 'pipewire-pulse' 'libpulse'

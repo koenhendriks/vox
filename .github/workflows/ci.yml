@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git \
+            qt6-base qt6-declarative qt6-multimedia qt6-wayland
+
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: bin/build
+
+      - name: Test
+        run: bin/test
