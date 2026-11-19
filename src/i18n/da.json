@@ -114,5 +114,15 @@
   "Make it the default microphone": "Gør den til standardmikrofon",
   "Open Vox": "Åbn Vox",
   "Quit Vox (the microphone keeps running)": "Afslut Vox (mikrofonen kører videre)",
-  "Vox is running, but the Vox Microphone is gone. Turn Vox off and on again to bring it back.": "Vox kører, men Vox Microphone er forsvundet. Sluk og tænd Vox igen for at få den tilbage."
+  "Vox is running, but the Vox Microphone is gone. Turn Vox off and on again to bring it back.": "Vox kører, men Vox Microphone er forsvundet. Sluk og tænd Vox igen for at få den tilbage.",
+  "Effects": "Effekter",
+  "Auto-tune": "Auto-tune",
+  "Snaps your voice to the notes of a key, from a subtle polish to a full robot.": "Trækker din stemme til tonerne i en toneart, fra diskret pudsning til fuld robot.",
+  "Key": "Toneart",
+  "Every note (chromatic)": "Alle toner (kromatisk)",
+  "%1 major": "%1-dur",
+  "%1 minor": "%1-mol",
+  "Retune speed": "Korrektionshastighed",
+  "At 100% it jumps between notes at once: the over-the-top sound. Lower glides more naturally.": "Ved 100 % springer den straks mellem toner: den overdrevne lyd. Lavere glider mere naturligt.",
+  "Turn effects on or off": "Slå effekter til eller fra"
 }

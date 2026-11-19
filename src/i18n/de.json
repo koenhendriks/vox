@@ -114,5 +114,15 @@
   "Make it the default microphone": "Zum Standardmikrofon machen",
   "Open Vox": "Vox öffnen",
   "Quit Vox (the microphone keeps running)": "Vox beenden (das Mikrofon läuft weiter)",
-  "Vox is running, but the Vox Microphone is gone. Turn Vox off and on again to bring it back.": "Vox läuft, aber das Vox Microphone ist weg. Schalte Vox aus und wieder ein, um es zurückzuholen."
+  "Vox is running, but the Vox Microphone is gone. Turn Vox off and on again to bring it back.": "Vox läuft, aber das Vox Microphone ist weg. Schalte Vox aus und wieder ein, um es zurückzuholen.",
+  "Effects": "Effekte",
+  "Auto-tune": "Auto-Tune",
+  "Snaps your voice to the notes of a key, from a subtle polish to a full robot.": "Zieht deine Stimme auf die Töne einer Tonart, von dezent bis voll Roboter.",
+  "Key": "Tonart",
+  "Every note (chromatic)": "Jeder Ton (chromatisch)",
+  "%1 major": "%1-Dur",
+  "%1 minor": "%1-Moll",
+  "Retune speed": "Korrekturtempo",
+  "At 100% it jumps between notes at once: the over-the-top sound. Lower glides more naturally.": "Bei 100 % springt es sofort zwischen Tönen: der übertriebene Sound. Niedriger gleitet natürlicher.",
+  "Turn effects on or off": "Effekte ein- oder ausschalten"
 }

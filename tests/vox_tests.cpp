@@ -1,5 +1,6 @@
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QTemporaryDir>
@@ -146,11 +147,66 @@ private slots:
         QVERIFY(Chain::configuration(profile, "evil\" } ]").contains(R"(target.object = "")"));
     }
 
+    void effectsAreOffForOldProfilesAndRoundTrip()
+    {
+        const Profile old = Profile::fromJson(QJsonObject{{"name", "Old"}, {"bass", 3}});
+        QVERIFY(!old.effects);
+        QCOMPARE(old.autotuneKey, 0);
+        QCOMPARE(old.autotuneSpeed, 100.0);
+
+        Profile profile;
+        profile.name = "Robot";
+        QVERIFY(profile.set("effects", true));
+        QVERIFY(profile.set("autotuneKey", 22.4));
+        QVERIFY(profile.set("autotuneSpeed", 140));
+        QCOMPARE(profile.autotuneKey, 22);
+        QCOMPARE(profile.autotuneSpeed, 100.0);
+        QCOMPARE(Profile::fromJson(profile.toJson()), profile);
+    }
+
+    void effectsSwitchTheAutotuneInLive()
+    {
+        Profile profile;
+        auto value = [](const Chain::Params &params, const QString &name) {
+            for (const auto &[key, v] : params)
+                if (key == name)
+                    return v;
+            return -1.0;
+        };
+        QCOMPARE(value(Chain::params(profile), "effectsmix:Gain 1"), 0.0);
+        QCOMPARE(value(Chain::params(profile), "effectsmix:Gain 2"), 1.0);
+        profile.effects = true;
+        profile.autotuneKey = 13;
+        profile.autotuneSpeed = 100;
+        const auto on = Chain::params(profile);
+        QCOMPARE(value(on, "effectsmix:Gain 1"), 1.0);
+        QCOMPARE(value(on, "effectsmix:Gain 2"), 0.0);
+        QCOMPARE(value(on, "autotune:scale"), 13.0);
+        QCOMPARE(value(on, "autotune:filter"), 0.02);
+        QCOMPARE(value(on, "autotune:fastmode"), 1.0);
+        profile.autotuneSpeed = 0;
+        QVERIFY(qAbs(value(Chain::params(profile), "autotune:filter") - 0.30) < 1e-9);
+        QCOMPARE(value(Chain::params(profile), "autotune:fastmode"), 0.0);
+    }
+
+    void configurationRoutesThroughTheAutotune()
+    {
+        const QString conf = Chain::configuration(Profile::presets().first(), "alsa_input.usb-studio");
+        const QString node = QStringLiteral("type = lv2 name = autotune plugin = \"http://gareus.org/oss/lv2/fat1#scales\"");
+        QVERIFY(conf.contains(node));
+        QVERIFY(conf.contains(R"({ output = "rumble:Out" input = "autotune:in" })"));
+        QVERIFY(conf.contains(R"({ output = "autotune:out" input = "effectsmix:In 1" })"));
+        QVERIFY(conf.contains(R"({ output = "rumble:Out" input = "effectsmix:In 2" })"));
+        QVERIFY(conf.contains(R"({ output = "effectsmix:Out" input = "bass:In" })"));
+        QVERIFY(!conf.contains(R"({ output = "rumble:Out" input = "bass:In" })"));
+        QVERIFY(conf.contains(R"("mode" = 0.0000)"));
+    }
+
     void reportsMissingPlugins()
     {
         QTemporaryDir dir;
         QCOMPARE(Chain::missingPackages({dir.path()}),
-                 QStringList({"noise-suppression-for-voice", "swh-plugins"}));
+                 QStringList({"noise-suppression-for-voice", "swh-plugins", "x42-plugins-lv2"}));
         for (const auto &plugin : Chain::plugins())
             write(dir.filePath(plugin.file), "");
         QVERIFY(Chain::missingPackages({dir.path()}).isEmpty());
@@ -664,6 +720,7 @@ private:
 
     static void write(const QString &path, const QByteArray &contents)
     {
+        QDir().mkpath(QFileInfo(path).absolutePath());
         QFile file(path);
         QVERIFY(file.open(QIODevice::WriteOnly));
         file.write(contents);

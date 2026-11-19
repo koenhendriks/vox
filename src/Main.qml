@@ -83,6 +83,7 @@ ApplicationWindow {
     Shortcut { sequence: "P"; context: Qt.ApplicationShortcut; enabled: !win.typing && tester.state === "ready"; onActivated: tester.togglePlay() }
     Shortcut { sequence: "Tab"; context: Qt.ApplicationShortcut; enabled: !win.typing && tester.state === "ready"; onActivated: tester.switchTrack() }
     Shortcut { sequence: "L"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: backend.toggleListening() }
+    Shortcut { sequence: "E"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: backend.edit("effects", !backend.current.effects) }
     Shortcut { sequence: "O"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: backend.setRunning(!backend.running) }
     Shortcut { sequence: "D"; context: Qt.ApplicationShortcut; enabled: !win.typing && backend.running; onActivated: backend.makeDefault() }
     Shortcut { sequence: "N"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: { backend.newProfile(); win.renameCurrent() } }
@@ -288,6 +289,7 @@ ApplicationWindow {
                             Layout.rightMargin: 24
                             Layout.bottomMargin: 24
                             Layout.fillWidth: true
+                            id: cards
                             columns: scroller.availableWidth > 740 ? 3 : 2
                             columnSpacing: 16
                             rowSpacing: 16
@@ -353,20 +355,82 @@ ApplicationWindow {
                                 }
                             }
 
-                            ControlGroup {
-                                title: qsTr("Loudness")
+                            // Loudness is short, so Effects stacks under it in the third
+                            // column and shows without scrolling; with two columns the
+                            // stack spans the second row.
+                            ColumnLayout {
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 Layout.preferredWidth: 1
-                                Layout.columnSpan: parent.columns === 3 ? 1 : 2
+                                Layout.alignment: Qt.AlignTop
+                                Layout.columnSpan: cards.columns === 3 ? 1 : 2
+                                spacing: 16
 
-                                ControlSlider {
-                                    key: "compression"; label: qsTr("Compression"); unit: "%"
-                                    hint: qsTr("Evens out loud and quiet moments, like a radio voice.")
+                                ControlGroup {
+                                    title: qsTr("Loudness")
+                                    Layout.fillWidth: true
+                                    Layout.alignment: Qt.AlignTop
+
+                                    ControlSlider {
+                                        key: "compression"; label: qsTr("Compression"); unit: "%"
+                                        hint: qsTr("Evens out loud and quiet moments, like a radio voice.")
+                                    }
+                                    ControlSlider {
+                                        key: "output"; label: qsTr("Output"); unit: "dB"; signed: true
+                                        hint: qsTr("Makes Vox louder or quieter. A limiter keeps it from clipping.")
+                                    }
                                 }
-                                ControlSlider {
-                                    key: "output"; label: qsTr("Output"); unit: "dB"; signed: true
-                                    hint: qsTr("Makes Vox louder or quieter. A limiter keeps it from clipping.")
+
+                                ControlGroup {
+                                    title: qsTr("Effects")
+                                    toggleable: true
+                                    checked: backend.current.effects
+                                    onToggled: checked => backend.edit("effects", checked)
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    Layout.preferredWidth: 1
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 18
+                                        enabled: backend.current.effects
+                                        opacity: enabled ? 1 : 0.45
+
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 2
+                                            Label { text: qsTr("Auto-tune"); font.weight: Font.Medium }
+                                            Label {
+                                                text: qsTr("Snaps your voice to the notes of a key, from a subtle polish to a full robot.")
+                                                color: win.dim
+                                                font.pixelSize: 12
+                                                wrapMode: Text.Wrap
+                                                Layout.fillWidth: true
+                                            }
+                                        }
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 4
+                                            Label { text: qsTr("Key"); font.weight: Font.Medium }
+                                            ComboBox {
+                                                Layout.fillWidth: true
+                                                Layout.preferredHeight: 40
+                                                focusPolicy: Qt.NoFocus
+                                                // x42-autotune's order: chromatic, then the
+                                                // major keys from C, then the minor keys.
+                                                readonly property var notes: ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
+                                                model: [qsTr("Every note (chromatic)")]
+                                                    .concat(notes.map(n => qsTr("%1 major").arg(n)))
+                                                    .concat(notes.map(n => qsTr("%1 minor").arg(n)))
+                                                currentIndex: backend.current.autotuneKey ?? 0
+                                                onActivated: index => backend.edit("autotuneKey", index)
+                                            }
+                                        }
+                                        ControlSlider {
+                                            key: "autotuneSpeed"; label: qsTr("Retune speed"); unit: "%"
+                                            hint: qsTr("At 100% it jumps between notes at once: the over-the-top sound. Lower glides more naturally.")
+                                        }
+                                    }
                                 }
                             }
                         }

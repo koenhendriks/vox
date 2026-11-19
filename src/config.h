@@ -21,6 +21,9 @@ struct Profile {
     double air = 0;          // high shelf at 10 kHz, dB
     double compression = 0;  // percent
     double output = 0;       // dB
+    bool effects = false;
+    int autotuneKey = 0;           // 0 chromatic, 1-12 major from C, 13-24 minor from C
+    double autotuneSpeed = 100;    // percent; 100 snaps at once, the robotic sound
 
     static const QList<Control> &controls();
     static QList<Profile> presets();

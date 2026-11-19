@@ -23,6 +23,7 @@ struct Compressor {
     double threshold, ratio, makeup;
 };
 Compressor compressor(double amount);
+double retuneFilter(double speed);
 
 // The controls a profile sets, as "node:Port" pairs. Bypass routes the raw
 // microphone straight to the output so the user can compare.
@@ -36,9 +37,10 @@ QString configuration(const Profile &profile, const QString &microphone);
 
 struct Plugin {
     QString file, package;
+    bool lv2;
 };
 const QList<Plugin> &plugins();
-// Packages whose LADSPA plugins can't be found where PipeWire looks.
+// Packages whose LADSPA or LV2 plugins can't be found where PipeWire looks.
 QStringList missingPackages(const QStringList &searchPath = {});
 
 }

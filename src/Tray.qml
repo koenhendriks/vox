@@ -71,6 +71,12 @@ SystemTrayIcon {
 
         MenuSeparator {}
         MenuItem {
+            text: qsTr("Effects")
+            checkable: true
+            checked: backend.current.effects ?? false
+            onTriggered: backend.edit("effects", !backend.current.effects)
+        }
+        MenuItem {
             text: qsTr("Open Vox")
             onTriggered: shell.showWindow()
         }

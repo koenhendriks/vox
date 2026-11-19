@@ -10,6 +10,7 @@ Rectangle {
     readonly property var shortcuts: [
         ["Space", qsTr("Compare with your raw microphone")],
         ["L", qsTr("Listen to yourself")],
+        ["E", qsTr("Turn effects on or off")],
         ["T", qsTr("Record a test, or stop recording")],
         ["P", qsTr("Play or pause the test")],
         ["Tab", qsTr("Switch between raw and Vox in the test")],

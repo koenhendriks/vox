@@ -18,6 +18,8 @@ const QList<Control> &Profile::controls() {
         {"air", -6, 9, 0.5},
         {"compression", 0, 100, 5},
         {"output", -12, 12, 0.5},
+        {"autotuneKey", 0, 24, 1},
+        {"autotuneSpeed", 0, 100, 5},
     };
     return list;
 }
@@ -43,21 +45,29 @@ QVariant Profile::value(const QString &key) const {
     if (key == "air") return air;
     if (key == "compression") return compression;
     if (key == "output") return output;
+    if (key == "effects") return effects;
+    if (key == "autotuneKey") return autotuneKey;
+    if (key == "autotuneSpeed") return autotuneSpeed;
     return {};
 }
 
 bool Profile::set(const QString &key, const QVariant &value) {
-    if (key == "denoise") {
-        denoise = value.toBool();
+    if (key == "denoise" || key == "effects") {
+        (key == "denoise" ? denoise : effects) = value.toBool();
         return true;
     }
     for (const auto &control : controls()) {
         if (control.key != key)
             continue;
         const double v = std::clamp(value.toDouble(), control.min, control.max);
+        if (key == "autotuneKey") {
+            autotuneKey = int(std::lround(v));
+            return true;
+        }
         double *field = key == "gate" ? &gate : key == "rumble" ? &rumble : key == "bass" ? &bass
                       : key == "mud" ? &mud : key == "presence" ? &presence : key == "air" ? &air
-                      : key == "compression" ? &compression : &output;
+                      : key == "compression" ? &compression : key == "autotuneSpeed" ? &autotuneSpeed
+                      : &output;
         *field = v;
         return true;
     }
@@ -72,7 +82,8 @@ QJsonObject Profile::toJson() const {
     return {{"name", name},         {"denoise", denoise},   {"gate", gate},
             {"rumble", rumble},     {"bass", bass},         {"mud", mud},
             {"presence", presence}, {"air", air},           {"compression", compression},
-            {"output", output}};
+            {"output", output},     {"effects", effects},   {"autotuneKey", autotuneKey},
+            {"autotuneSpeed", autotuneSpeed}};
 }
 
 Profile Profile::fromJson(const QJsonObject &object) {
@@ -80,6 +91,8 @@ Profile Profile::fromJson(const QJsonObject &object) {
     profile.name = object.value("name").toString().trimmed();
     if (object.contains("denoise"))
         profile.denoise = object.value("denoise").toBool();
+    // Profiles saved before effects existed load with them off.
+    profile.effects = object.value("effects").toBool(false);
     for (const auto &control : controls())
         if (object.value(control.key).isDouble())
             profile.set(control.key, object.value(control.key).toDouble());

@@ -1,5 +1,6 @@
 #include "chain.h"
 
+#include <QDir>
 #include <QFileInfo>
 #include <QMap>
 #include <cmath>
@@ -19,6 +20,12 @@ Compressor compressor(double amount) {
     return c;
 }
 
+// x42-autotune's filter is how long it takes to settle on a note: its
+// minimum, 0.02, jumps at once, which is the over-the-top sound.
+double retuneFilter(double speed) {
+    return 0.02 + (1.0 - std::clamp(speed, 0.0, 100.0) / 100.0) * 0.28;
+}
+
 Params params(const Profile &p, bool bypass) {
     const Compressor c = compressor(p.compression);
     return {
@@ -26,6 +33,11 @@ Params params(const Profile &p, bool bypass) {
         {"denoisemix:Gain 1", p.denoise ? 1.0 : 0.0},
         {"denoisemix:Gain 2", p.denoise ? 0.0 : 1.0},
         {"rumble:Freq", p.rumble},
+        {"autotune:scale", double(p.autotuneKey)},
+        {"autotune:filter", retuneFilter(p.autotuneSpeed)},
+        {"autotune:fastmode", p.autotuneSpeed >= 50 ? 1.0 : 0.0},
+        {"effectsmix:Gain 1", p.effects ? 1.0 : 0.0},
+        {"effectsmix:Gain 2", p.effects ? 0.0 : 1.0},
         {"bass:Gain", p.bass},
         {"mud:Gain", p.mud},
         {"presence:Gain", p.presence},
@@ -74,6 +86,11 @@ QString configuration(const Profile &profile, const QString &microphone) {
         {"compressor:Knee radius (dB)", 6},
         {"limiter:Limit (dB)", -1},
         {"limiter:Release time (s)", 0.08},
+        // Auto mode, full correction: the plugin picks the nearest note in
+        // the key itself, with no MIDI input.
+        {"autotune:mode", 0},
+        {"autotune:corr", 1.0},
+        {"autotune:tuning", 440},
     };
     QMap<QString, QStringList> controls;
     for (const auto &[name, value] : fixed + params(profile)) {
@@ -111,6 +128,8 @@ context.modules = [
                     { type = ladspa name = denoise plugin = librnnoise_ladspa label = noise_suppressor_mono%1 }
                     { type = builtin name = denoisemix label = mixer%2 }
                     { type = builtin name = rumble label = bq_highpass%3 }
+                    { type = lv2 name = autotune plugin = "http://gareus.org/oss/lv2/fat1#scales"%14 }
+                    { type = builtin name = effectsmix label = mixer%15 }
                     { type = builtin name = bass label = bq_lowshelf%4 }
                     { type = builtin name = mud label = bq_peaking%5 }
                     { type = builtin name = presence label = bq_peaking%6 }
@@ -124,7 +143,10 @@ context.modules = [
                     { output = "denoise:Output" input = "denoisemix:In 1" }
                     { output = "split:Out" input = "denoisemix:In 2" }
                     { output = "denoisemix:Out" input = "rumble:In" }
-                    { output = "rumble:Out" input = "bass:In" }
+                    { output = "rumble:Out" input = "autotune:in" }
+                    { output = "autotune:out" input = "effectsmix:In 1" }
+                    { output = "rumble:Out" input = "effectsmix:In 2" }
+                    { output = "effectsmix:Out" input = "bass:In" }
                     { output = "bass:Out" input = "mud:In" }
                     { output = "mud:Out" input = "presence:In" }
                     { output = "presence:Out" input = "air:In" }
@@ -161,29 +183,33 @@ context.modules = [
 )conf")
         .arg(control("denoise"), control("denoisemix"), control("rumble"), control("bass"), control("mud"),
              control("presence"), control("air"), control("compressor"), control("limiter"))
-        .arg(control("output"), CaptureName, target, SourceName);
+        .arg(control("output"), CaptureName, target, SourceName)
+        .arg(control("autotune"), control("effectsmix"));
 }
 
 const QList<Plugin> &plugins() {
     static const QList<Plugin> list{
-        {"librnnoise_ladspa.so", "noise-suppression-for-voice"},
-        {"sc4m_1916.so", "swh-plugins"},
-        {"fast_lookahead_limiter_1913.so", "swh-plugins"},
+        {"librnnoise_ladspa.so", "noise-suppression-for-voice", false},
+        {"sc4m_1916.so", "swh-plugins", false},
+        {"fast_lookahead_limiter_1913.so", "swh-plugins", false},
+        {"fat1.lv2/manifest.ttl", "x42-plugins-lv2", true},
     };
     return list;
 }
 
 QStringList missingPackages(const QStringList &searchPath) {
-    // The same places PipeWire's LADSPA loader looks.
-    QStringList directories = searchPath;
-    if (directories.isEmpty()) {
-        directories = qEnvironmentVariable("LADSPA_PATH").split(':', Qt::SkipEmptyParts);
-        directories << "/usr/lib64/ladspa" << "/usr/lib/ladspa";
+    // The same places PipeWire's LADSPA loader and lilv look.
+    QStringList ladspa = searchPath, lv2 = searchPath;
+    if (searchPath.isEmpty()) {
+        ladspa = qEnvironmentVariable("LADSPA_PATH").split(':', Qt::SkipEmptyParts);
+        ladspa << "/usr/lib64/ladspa" << "/usr/lib/ladspa";
+        lv2 = qEnvironmentVariable("LV2_PATH").split(':', Qt::SkipEmptyParts);
+        lv2 << QDir::homePath() + "/.lv2" << "/usr/local/lib/lv2" << "/usr/lib/lv2";
     }
     QStringList missing;
     for (const auto &plugin : plugins()) {
         bool found = false;
-        for (const auto &directory : directories)
+        for (const auto &directory : plugin.lv2 ? lv2 : ladspa)
             found = found || QFileInfo::exists(directory + "/" + plugin.file);
         if (!found && !missing.contains(plugin.package))
             missing << plugin.package;
