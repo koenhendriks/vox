@@ -113,5 +113,6 @@
   "Vox Microphone on": "Vox Microphone an",
   "Make it the default microphone": "Zum Standardmikrofon machen",
   "Open Vox": "Vox öffnen",
-  "Quit Vox (the microphone keeps running)": "Vox beenden (das Mikrofon läuft weiter)"
+  "Quit Vox (the microphone keeps running)": "Vox beenden (das Mikrofon läuft weiter)",
+  "Vox is running, but the Vox Microphone is gone. Turn Vox off and on again to bring it back.": "Vox läuft, aber das Vox Microphone ist weg. Schalte Vox aus und wieder ein, um es zurückzuholen."
 }

@@ -65,6 +65,8 @@ AudioStatus PipeWireAudio::parseStatus(const QByteArray &show, const QByteArray 
                           && !source.value("monitor_of_sink").isUndefined()
                           && source.value("monitor_of_sink").toString() != "n/a";
         const QString deviceClass = source.value("properties").toObject().value("device.class").toString();
+        if (name == Chain::SourceName)
+            status.sourcePresent = true;
         if (name.isEmpty() || name == Chain::SourceName || monitor || deviceClass == "monitor")
             continue;
         status.microphones.append({name, source.value("description").toString(name)});

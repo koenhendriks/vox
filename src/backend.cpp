@@ -107,6 +107,8 @@ QString Backend::problem() const {
         return tr("The Vox service isn't installed, so Vox can't run in the background. Install the Vox package.");
     if (m_status.failed)
         return tr("Vox couldn't start. See what went wrong with: journalctl --user -u vox");
+    if (sourceMissing())
+        return tr("Vox is running, but the Vox Microphone is gone. Turn Vox off and on again to bring it back.");
     if (m_ready && !m_config.microphone.isEmpty() && !microphoneConnected())
         return tr("Your microphone isn't connected. Plug it in, or pick another one.");
     return m_error;
@@ -135,7 +137,9 @@ void Backend::setForeground(bool foreground) {
 
 void Backend::setStatus(const AudioStatus &status) {
     const bool wasRunning = m_status.running;
-    const bool changedStatus = !m_ready || !(status == m_status);
+    const bool wasMissing = sourceMissing();
+    m_missingPolls = status.running && !status.sourcePresent ? m_missingPolls + 1 : 0;
+    const bool changedStatus = !m_ready || !(status == m_status) || wasMissing != sourceMissing();
     m_status = status;
     m_ready = true;
 

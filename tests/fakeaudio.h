@@ -21,7 +21,7 @@ public:
 
     void refresh() override { emit statusChanged(status); }
     void setRunning(bool running) override {
-        status.running = status.enabled = running;
+        status.running = status.enabled = status.sourcePresent = running;
         refresh();
     }
     void restart() override { ++restarts; }

@@ -108,6 +108,7 @@ int status(bool json) {
                            {"failed", s.failed},
                            {"installed", s.serviceInstalled},
                            {"default", s.defaultSource == Chain::SourceName},
+                           {"sourcePresent", s.sourcePresent},
                            {"source", Chain::SourceName},
                            {"profile", config.current().name},
                            {"microphone", config.microphone},
@@ -117,6 +118,8 @@ int status(bool json) {
         printJson(object);
     } else {
         out(s.running ? tr("Vox is running.") : s.failed ? tr("Vox failed to start.") : tr("Vox is off."));
+        if (s.running && !s.sourcePresent)
+            out(tr("The Vox Microphone is missing; run vox off and vox on to bring it back."));
         out(tr("Profile: %1").arg(config.current().name));
         out(tr("Microphone: %1").arg(microphone.isEmpty() ? tr("not picked yet") : microphone));
         out(s.defaultSource == Chain::SourceName ? tr("The Vox Microphone is the default microphone.")

@@ -16,6 +16,9 @@ struct AudioStatus {
     bool running = false;
     bool enabled = false;
     bool failed = false;
+    // Whether the Vox Microphone itself is there, which a running service
+    // doesn't guarantee.
+    bool sourcePresent = false;
     QString defaultSource;
     QList<Microphone> microphones;
     bool operator==(const AudioStatus &other) const = default;

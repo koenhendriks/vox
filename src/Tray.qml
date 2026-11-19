@@ -46,6 +46,7 @@ SystemTrayIcon {
         MenuItem {
             text: qsTr("Make it the default microphone")
             visible: backend.running && !backend.isDefault
+            enabled: !backend.sourceMissing
             onTriggered: backend.makeDefault()
         }
         MenuSeparator {}

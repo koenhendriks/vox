@@ -154,6 +154,7 @@ ApplicationWindow {
                     }
                     Button {
                         visible: backend.running && !backend.isDefault
+                        enabled: !backend.sourceMissing
                         text: qsTr("Make default")
                         Material.background: theme.accent
                         Material.foreground: theme.accentForeground

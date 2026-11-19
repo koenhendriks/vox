@@ -113,5 +113,6 @@
   "Vox Microphone on": "Vox Microphone tændt",
   "Make it the default microphone": "Gør den til standardmikrofon",
   "Open Vox": "Åbn Vox",
-  "Quit Vox (the microphone keeps running)": "Afslut Vox (mikrofonen kører videre)"
+  "Quit Vox (the microphone keeps running)": "Afslut Vox (mikrofonen kører videre)",
+  "Vox is running, but the Vox Microphone is gone. Turn Vox off and on again to bring it back.": "Vox kører, men Vox Microphone er forsvundet. Sluk og tænd Vox igen for at få den tilbage."
 }

@@ -143,6 +143,11 @@ context.modules = [
                 # Without this, an unplugged microphone would make WirePlumber
                 # fall back to the default source, which may be Vox itself.
                 node.dont-fallback = true
+                # With dont-fallback alone, WirePlumber destroys a stream whose
+                # target is gone, and the filter chain goes with it: a USB mic
+                # that resets for a second took the Vox Microphone away for
+                # good. Linger makes WirePlumber wait and relink it instead.
+                node.linger = true
 %12            }
             playback.props = {
                 node.name = "%13"

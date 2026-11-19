@@ -19,6 +19,7 @@ class Backend : public QObject {
     Q_PROPERTY(bool microphoneConnected READ microphoneConnected NOTIFY statusChanged)
     Q_PROPERTY(bool running READ running NOTIFY statusChanged)
     Q_PROPERTY(bool isDefault READ isDefault NOTIFY statusChanged)
+    Q_PROPERTY(bool sourceMissing READ sourceMissing NOTIFY statusChanged)
     Q_PROPERTY(bool ready READ ready NOTIFY statusChanged)
     Q_PROPERTY(QString problem READ problem NOTIFY problemChanged)
     Q_PROPERTY(bool bypass READ bypass NOTIFY bypassChanged)
@@ -43,6 +44,9 @@ public:
     bool microphoneConnected() const;
     bool running() const { return m_status.running; }
     bool isDefault() const;
+    // The service runs but the Vox Microphone is gone, seen twice in a row so
+    // an engine that is still starting up doesn't count.
+    bool sourceMissing() const { return m_status.running && m_missingPolls >= 2; }
     bool ready() const { return m_ready; }
     QString problem() const;
     bool bypass() const { return m_bypass; }
@@ -108,6 +112,7 @@ private:
     QList<Config> m_undo, m_redo;
     AudioStatus m_status;
     bool m_ready = false;
+    int m_missingPolls = 0;
     QString m_loadError, m_error;
     bool m_bypass = false, m_listening = false, m_metering = false;
     double m_micLevel = -90, m_voxLevel = -90;

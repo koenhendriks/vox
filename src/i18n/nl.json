@@ -113,5 +113,6 @@
   "Vox Microphone on": "Vox Microphone aan",
   "Make it the default microphone": "Maak hem de standaardmicrofoon",
   "Open Vox": "Vox openen",
-  "Quit Vox (the microphone keeps running)": "Vox afsluiten (de microfoon blijft actief)"
+  "Quit Vox (the microphone keeps running)": "Vox afsluiten (de microfoon blijft actief)",
+  "Vox is running, but the Vox Microphone is gone. Turn Vox off and on again to bring it back.": "Vox draait, maar de Vox Microphone is verdwenen. Zet Vox uit en weer aan om hem terug te halen."
 }

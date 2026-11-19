@@ -137,6 +137,9 @@ private slots:
         QVERIFY(conf.contains(R"(node.name = "vox.capture")"));
         QVERIFY(conf.contains(R"("Gain" = 2.0000)"));
         QVERIFY(conf.contains("node.dont-fallback = true"));
+        // Without linger, WirePlumber destroys the capture stream when the
+        // mic disappears, and the Vox Microphone with it.
+        QVERIFY(conf.contains("node.linger = true"));
         QVERIFY(!conf.contains(QRegularExpression("%\\d")));
 
         QVERIFY(!Chain::configuration(profile, {}).contains("target.object"));
@@ -166,9 +169,11 @@ private slots:
         QCOMPARE(status.defaultSource, QString("vox.microphone"));
         QCOMPARE(status.microphones.size(), 1);
         QCOMPARE(status.microphones.first().name, QString("alsa_input.usb-studio"));
+        QVERIFY(status.sourcePresent);
 
         const AudioStatus off = PipeWireAudio::parseStatus("LoadState=not-found\nActiveState=failed\n", "", "[]");
         QVERIFY(!off.serviceInstalled && !off.running && off.failed);
+        QVERIFY(!off.sourcePresent);
     }
 
     void meterMeasuresRms()
@@ -305,6 +310,26 @@ private slots:
         Backend backend(&audio, path, plugins(dir));
         QVERIFY(!backend.microphoneConnected());
         QVERIFY(backend.problem().contains("isn't connected"));
+    }
+
+    void reportsAMissingVoxMicrophone()
+    {
+        QTemporaryDir dir;
+        FakeAudio audio;
+        audio.status = FakeAudio::sample();
+        audio.status.running = true;
+        audio.status.sourcePresent = false;
+        Backend backend(&audio, dir.filePath("config.json"), plugins(dir));
+        // The engine may still be starting on the first look.
+        QVERIFY(!backend.sourceMissing());
+        backend.refresh();
+        QVERIFY(backend.sourceMissing());
+        QVERIFY(backend.problem().contains("Vox Microphone is gone"));
+
+        audio.status.sourcePresent = true;
+        backend.refresh();
+        QVERIFY(!backend.sourceMissing());
+        QVERIFY(!backend.problem().contains("gone"));
     }
 
     void reportsMissingPluginsInTheWindow()
