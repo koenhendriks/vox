@@ -26,14 +26,34 @@ double retuneFilter(double speed) {
     return 0.02 + (1.0 - std::clamp(speed, 0.0, 100.0) / 100.0) * 0.28;
 }
 
+QList<bool> noteMask(int notes, int root) {
+    // In the order the window lists them, wildest first.
+    static const QList<QList<int>> sets{
+        {0},                         // robot: one note
+        {0, 4, 7},                   // major chord
+        {0, 3, 7},                   // minor chord
+        {0, 2, 4, 5, 7, 9, 11},      // major key
+        {0, 2, 3, 5, 7, 8, 10},      // natural minor key
+        {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
+    };
+    const QList<int> &set = sets[std::clamp(notes, 0, int(sets.size()) - 1)];
+    QList<bool> mask(12, false);
+    for (int interval : set)
+        mask[(((root + interval) % 12) + 12) % 12] = true;
+    return mask;
+}
+
 Params params(const Profile &p, bool bypass) {
     const Compressor c = compressor(p.compression);
-    return {
+    Params notes;
+    const QList<bool> mask = noteMask(p.autotuneNotes, p.autotuneRoot);
+    for (int i = 0; i < 12; ++i)
+        notes.append({QString("autotune:m%1").arg(i, 2, 10, QChar('0')), mask[i] ? 1.0 : 0.0});
+    return notes + Params{
         {"denoise:VAD Threshold (%)", p.gate},
         {"denoisemix:Gain 1", p.denoise ? 1.0 : 0.0},
         {"denoisemix:Gain 2", p.denoise ? 0.0 : 1.0},
         {"rumble:Freq", p.rumble},
-        {"autotune:scale", double(p.autotuneKey)},
         {"autotune:filter", retuneFilter(p.autotuneSpeed)},
         {"autotune:fastmode", p.autotuneSpeed >= 50 ? 1.0 : 0.0},
         {"effectsmix:Gain 1", p.effects ? 1.0 : 0.0},
@@ -128,7 +148,7 @@ context.modules = [
                     { type = ladspa name = denoise plugin = librnnoise_ladspa label = noise_suppressor_mono%1 }
                     { type = builtin name = denoisemix label = mixer%2 }
                     { type = builtin name = rumble label = bq_highpass%3 }
-                    { type = lv2 name = autotune plugin = "http://gareus.org/oss/lv2/fat1#scales"%14 }
+                    { type = lv2 name = autotune plugin = "http://gareus.org/oss/lv2/fat1"%14 }
                     { type = builtin name = effectsmix label = mixer%15 }
                     { type = builtin name = bass label = bq_lowshelf%4 }
                     { type = builtin name = mud label = bq_peaking%5 }

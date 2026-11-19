@@ -18,7 +18,8 @@ const QList<Control> &Profile::controls() {
         {"air", -6, 9, 0.5},
         {"compression", 0, 100, 5},
         {"output", -12, 12, 0.5},
-        {"autotuneKey", 0, 24, 1},
+        {"autotuneNotes", 0, 5, 1},
+        {"autotuneRoot", 0, 11, 1},
         {"autotuneSpeed", 0, 100, 5},
     };
     return list;
@@ -46,7 +47,8 @@ QVariant Profile::value(const QString &key) const {
     if (key == "compression") return compression;
     if (key == "output") return output;
     if (key == "effects") return effects;
-    if (key == "autotuneKey") return autotuneKey;
+    if (key == "autotuneNotes") return autotuneNotes;
+    if (key == "autotuneRoot") return autotuneRoot;
     if (key == "autotuneSpeed") return autotuneSpeed;
     return {};
 }
@@ -60,8 +62,8 @@ bool Profile::set(const QString &key, const QVariant &value) {
         if (control.key != key)
             continue;
         const double v = std::clamp(value.toDouble(), control.min, control.max);
-        if (key == "autotuneKey") {
-            autotuneKey = int(std::lround(v));
+        if (key == "autotuneNotes" || key == "autotuneRoot") {
+            (key == "autotuneNotes" ? autotuneNotes : autotuneRoot) = int(std::lround(v));
             return true;
         }
         double *field = key == "gate" ? &gate : key == "rumble" ? &rumble : key == "bass" ? &bass
@@ -82,7 +84,8 @@ QJsonObject Profile::toJson() const {
     return {{"name", name},         {"denoise", denoise},   {"gate", gate},
             {"rumble", rumble},     {"bass", bass},         {"mud", mud},
             {"presence", presence}, {"air", air},           {"compression", compression},
-            {"output", output},     {"effects", effects},   {"autotuneKey", autotuneKey},
+            {"output", output},     {"effects", effects},   {"autotuneNotes", autotuneNotes},
+            {"autotuneRoot", autotuneRoot},
             {"autotuneSpeed", autotuneSpeed}};
 }
 

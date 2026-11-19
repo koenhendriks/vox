@@ -117,12 +117,16 @@
   "Vox is running, but the Vox Microphone is gone. Turn Vox off and on again to bring it back.": "Vox kører, men Vox Microphone er forsvundet. Sluk og tænd Vox igen for at få den tilbage.",
   "Effects": "Effekter",
   "Auto-tune": "Auto-tune",
-  "Snaps your voice to the notes of a key, from a subtle polish to a full robot.": "Trækker din stemme til tonerne i en toneart, fra diskret pudsning til fuld robot.",
-  "Key": "Toneart",
-  "Every note (chromatic)": "Alle toner (kromatisk)",
-  "%1 major": "%1-dur",
-  "%1 minor": "%1-mol",
   "Retune speed": "Korrektionshastighed",
   "At 100% it jumps between notes at once: the over-the-top sound. Lower glides more naturally.": "Ved 100 % springer den straks mellem toner: den overdrevne lyd. Lavere glider mere naturligt.",
-  "Turn effects on or off": "Slå effekter til eller fra"
+  "Turn effects on or off": "Slå effekter til eller fra",
+  "Notes": "Toner",
+  "Root note": "Grundtone",
+  "Robot: one note": "Robot: én tone",
+  "Major chord: three notes": "Durakkord: tre toner",
+  "Minor chord: three notes": "Molakkord: tre toner",
+  "Major key: seven notes": "Durtoneart: syv toner",
+  "Minor key: seven notes": "Moltoneart: syv toner",
+  "Every note: subtle": "Alle toner: diskret",
+  "Snaps your voice to a few notes. Fewer notes make bigger, wilder jumps.": "Trækker din stemme til nogle få toner. Færre toner giver større, vildere spring."
 }

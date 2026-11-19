@@ -22,7 +22,8 @@ struct Profile {
     double compression = 0;  // percent
     double output = 0;       // dB
     bool effects = false;
-    int autotuneKey = 0;           // 0 chromatic, 1-12 major from C, 13-24 minor from C
+    int autotuneNotes = 1;         // Chain::NoteSets: 0 robot, 1 major chord ... 5 every note
+    int autotuneRoot = 9;          // 0 C ... 11 B; A by default
     double autotuneSpeed = 100;    // percent; 100 snaps at once, the robotic sound
 
     static const QList<Control> &controls();

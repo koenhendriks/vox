@@ -151,15 +151,18 @@ private slots:
     {
         const Profile old = Profile::fromJson(QJsonObject{{"name", "Old"}, {"bass", 3}});
         QVERIFY(!old.effects);
-        QCOMPARE(old.autotuneKey, 0);
+        QCOMPARE(old.autotuneNotes, 1);
+        QCOMPARE(old.autotuneRoot, 9);
         QCOMPARE(old.autotuneSpeed, 100.0);
 
         Profile profile;
         profile.name = "Robot";
         QVERIFY(profile.set("effects", true));
-        QVERIFY(profile.set("autotuneKey", 22.4));
+        QVERIFY(profile.set("autotuneNotes", 4.4));
+        QVERIFY(profile.set("autotuneRoot", 30));
         QVERIFY(profile.set("autotuneSpeed", 140));
-        QCOMPARE(profile.autotuneKey, 22);
+        QCOMPARE(profile.autotuneNotes, 4);
+        QCOMPARE(profile.autotuneRoot, 11);
         QCOMPARE(profile.autotuneSpeed, 100.0);
         QCOMPARE(Profile::fromJson(profile.toJson()), profile);
     }
@@ -176,12 +179,17 @@ private slots:
         QCOMPARE(value(Chain::params(profile), "effectsmix:Gain 1"), 0.0);
         QCOMPARE(value(Chain::params(profile), "effectsmix:Gain 2"), 1.0);
         profile.effects = true;
-        profile.autotuneKey = 13;
+        profile.autotuneNotes = 1;   // major chord
+        profile.autotuneRoot = 9;    // A: A, C# and E
         profile.autotuneSpeed = 100;
         const auto on = Chain::params(profile);
         QCOMPARE(value(on, "effectsmix:Gain 1"), 1.0);
         QCOMPARE(value(on, "effectsmix:Gain 2"), 0.0);
-        QCOMPARE(value(on, "autotune:scale"), 13.0);
+        QStringList enabled;
+        for (int i = 0; i < 12; ++i)
+            if (value(on, QString("autotune:m%1").arg(i, 2, 10, QChar('0'))) == 1.0)
+                enabled << QString::number(i);
+        QCOMPARE(enabled, QStringList({"1", "4", "9"}));
         QCOMPARE(value(on, "autotune:filter"), 0.02);
         QCOMPARE(value(on, "autotune:fastmode"), 1.0);
         profile.autotuneSpeed = 0;
@@ -189,10 +197,25 @@ private slots:
         QCOMPARE(value(Chain::params(profile), "autotune:fastmode"), 0.0);
     }
 
+    void noteMasksGetSmallerTowardsTheRobot()
+    {
+        auto count = [](const QList<bool> &mask) { return int(std::count(mask.begin(), mask.end(), true)); };
+        QCOMPARE(count(Chain::noteMask(0, 9)), 1);
+        QVERIFY(Chain::noteMask(0, 9)[9]);
+        QCOMPARE(count(Chain::noteMask(1, 0)), 3);
+        QCOMPARE(count(Chain::noteMask(3, 0)), 7);
+        QCOMPARE(count(Chain::noteMask(5, 7)), 12);
+        // C minor chord: C, Eb and G.
+        const QList<bool> cMinor = Chain::noteMask(2, 0);
+        QVERIFY(cMinor[0] && cMinor[3] && cMinor[7]);
+        // Out-of-range settings fall back to the nearest set rather than crash.
+        QCOMPARE(count(Chain::noteMask(99, 0)), 12);
+    }
+
     void configurationRoutesThroughTheAutotune()
     {
         const QString conf = Chain::configuration(Profile::presets().first(), "alsa_input.usb-studio");
-        const QString node = QStringLiteral("type = lv2 name = autotune plugin = \"http://gareus.org/oss/lv2/fat1#scales\"");
+        const QString node = QStringLiteral("type = lv2 name = autotune plugin = \"http://gareus.org/oss/lv2/fat1\" control");
         QVERIFY(conf.contains(node));
         QVERIFY(conf.contains(R"({ output = "rumble:Out" input = "autotune:in" })"));
         QVERIFY(conf.contains(R"({ output = "autotune:out" input = "effectsmix:In 1" })"));

@@ -401,7 +401,7 @@ ApplicationWindow {
                                             spacing: 2
                                             Label { text: qsTr("Auto-tune"); font.weight: Font.Medium }
                                             Label {
-                                                text: qsTr("Snaps your voice to the notes of a key, from a subtle polish to a full robot.")
+                                                text: qsTr("Snaps your voice to a few notes. Fewer notes make bigger, wilder jumps.")
                                                 color: win.dim
                                                 font.pixelSize: 12
                                                 wrapMode: Text.Wrap
@@ -411,19 +411,31 @@ ApplicationWindow {
                                         ColumnLayout {
                                             Layout.fillWidth: true
                                             spacing: 4
-                                            Label { text: qsTr("Key"); font.weight: Font.Medium }
+                                            Label { text: qsTr("Notes"); font.weight: Font.Medium }
                                             ComboBox {
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: 40
                                                 focusPolicy: Qt.NoFocus
-                                                // x42-autotune's order: chromatic, then the
-                                                // major keys from C, then the minor keys.
-                                                readonly property var notes: ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
-                                                model: [qsTr("Every note (chromatic)")]
-                                                    .concat(notes.map(n => qsTr("%1 major").arg(n)))
-                                                    .concat(notes.map(n => qsTr("%1 minor").arg(n)))
-                                                currentIndex: backend.current.autotuneKey ?? 0
-                                                onActivated: index => backend.edit("autotuneKey", index)
+                                                // Chain::noteMask's order: the fewer notes, the bigger the
+                                                // jumps, so the wildest come first.
+                                                model: [qsTr("Robot: one note"), qsTr("Major chord: three notes"), qsTr("Minor chord: three notes"),
+                                                        qsTr("Major key: seven notes"), qsTr("Minor key: seven notes"), qsTr("Every note: subtle")]
+                                                currentIndex: backend.current.autotuneNotes ?? 1
+                                                onActivated: index => backend.edit("autotuneNotes", index)
+                                            }
+                                        }
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 4
+                                            enabled: (backend.current.autotuneNotes ?? 1) !== 5
+                                            Label { text: qsTr("Root note"); font.weight: Font.Medium }
+                                            ComboBox {
+                                                Layout.fillWidth: true
+                                                Layout.preferredHeight: 40
+                                                focusPolicy: Qt.NoFocus
+                                                model: ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
+                                                currentIndex: backend.current.autotuneRoot ?? 9
+                                                onActivated: index => backend.edit("autotuneRoot", index)
                                             }
                                         }
                                         ControlSlider {

@@ -66,12 +66,21 @@ pin Vox to keep it in sight. To stop the tray starting at login, copy
 ## Effects
 
 Switch **Effects** on, in its card, with E, or from the tray menu, and Vox runs
-your voice through an auto-tune: every note snaps to the nearest note of the
-key you pick, or to any semitone with **Every note**. At a retune speed of
-100% it jumps between notes at once, the robotic sound of a thousand pop
-songs; lower speeds glide into each note more naturally. Effects belong to
-the profile, so a profile for fun and one for meetings each remember theirs,
-and switching it on or off never drops the Vox Microphone out of a call.
+your voice through an auto-tune that snaps every note to one of a few notes.
+The fewer notes, the bigger the jumps, so pick how wild it gets:
+
+| Notes | What it sounds like |
+| --- | --- |
+| Robot: one note | Every syllable on the same note, a full robot |
+| Major or minor chord | Your voice jumps between three notes, as if it sings (the default) |
+| Major or minor key | Seven notes; melodic, less extreme |
+| Every note | Barely audible on a speaking voice; for singing |
+
+**Root note** sets the note the chord, key or robot is built on. At a retune
+speed of 100% it jumps between notes at once; lower speeds glide into each
+note. Effects belong to the profile, so a profile for fun and one for
+meetings each remember theirs, and switching never drops the Vox Microphone
+out of a call.
 
 ## Test recording
 
@@ -107,7 +116,8 @@ is closed. Every setting is a control on the running graph, so the window and
 | Compression | One knob for threshold, ratio and make-up gain |
 | Output | Gain into a limiter that stops at -1 dBFS |
 | Effects | Switches the auto-tune in or out of the chain |
-| Key | The notes auto-tune snaps to: every semitone, or a major or minor key |
+| Notes | Which notes auto-tune snaps to: one, a chord, a key, or every note |
+| Root note | The note the chord, key or robot is built on |
 | Retune speed | How fast it snaps; 100% jumps at once, for the robotic sound |
 
 The presets are Natural, Broadcast, Podcast and Meetings. Edit them, or press

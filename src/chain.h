@@ -24,6 +24,10 @@ struct Compressor {
 };
 Compressor compressor(double amount);
 double retuneFilter(double speed);
+// Which of the 12 notes, from C, auto-tune snaps to for a profile's notes
+// setting and root. Fewer notes make bigger jumps: on a speaking voice, every
+// note is barely audible and one note is a full robot.
+QList<bool> noteMask(int notes, int root);
 
 // The controls a profile sets, as "node:Port" pairs. Bypass routes the raw
 // microphone straight to the output so the user can compare.
