@@ -5,7 +5,7 @@ TARGET = vox
 TEMPLATE = app
 
 # The one place the version is set; release.yml checks the tag against it.
-VERSION = 0.5.1
+VERSION = 0.6.0
 
 # A define would change only the compiler flags, which make doesn't track, so
 # a bumped version would leave main.o stale. A header written only when the
