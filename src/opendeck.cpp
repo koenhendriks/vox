@@ -96,9 +96,10 @@ OpenDeckPlugin::OpenDeckPlugin(VoxControl *vox, QObject *parent) : QObject(paren
             sendLists(m_keys.value(m_inspected).action, m_inspected);
     });
     connect(m_vox, &VoxControl::runningChanged, this, [this](bool running) {
-        if (running == m_running)
+        if (m_runningKnown && running == m_running)
             return;
         m_running = running;
+        m_runningKnown = true;
         updateAll();
     });
     // The Vox Microphone can be switched elsewhere: the window, the tray,
@@ -187,7 +188,7 @@ void OpenDeckPlugin::update(const QString &context) {
         title(key.settings.value("sound").toString());
     } else if (key.action == EffectsAction) {
         state(config.current().effects);
-    } else if (key.action == PowerAction) {
+    } else if (key.action == PowerAction && m_runningKnown) {
         state(m_running);
     }
 }

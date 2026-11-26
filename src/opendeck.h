@@ -95,5 +95,8 @@ private:
     QHash<QString, Key> m_keys;  // by context
     QString m_inspected;         // the key whose settings page is open
     bool m_running = false;
+    // Until systemd has answered, the Vox Microphone key shows no state,
+    // rather than flashing off before it turns on.
+    bool m_runningKnown = false;
     QTimer m_poll;
 };
