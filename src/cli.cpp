@@ -2,6 +2,7 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -15,6 +16,7 @@
 
 #include "chain.h"
 #include "config.h"
+#include "opendeck.h"
 #include "pipewireaudio.h"
 
 namespace {
@@ -70,7 +72,9 @@ QString usage() {
               "  use <profile>       Switch profile, by name or number, live\n"
               "  on | off            Start or stop the Vox Microphone, now and at login\n"
               "  default             Make the Vox Microphone the default microphone\n"
+              "  effects [on|off]    Turn the profile's effects on or off; without either, toggle them\n"
               "  sounds              List the soundboard's sounds\n"
+              "  opendeck install    Add the Vox plugin to OpenDeck, for Stream Deck keys\n"
               "  play <sound>        Play a sound into the Vox Microphone, by name or number\n"
               "  engine              Run the audio engine (the vox service does this)\n"
               "  skill [install]     Print the skill for coding agents, or install it\n"
@@ -249,6 +253,71 @@ int use(const QString &wanted, bool json) {
     return 0;
 }
 
+// Switches the active profile's effects; `how` is on, off or toggle.
+int effects(const QString &how, bool json) {
+    if (how != "on" && how != "off" && how != "toggle")
+        return fail(tr("Say what to do: vox effects on, off or toggle"), json);
+    const QString path = Config::defaultPath();
+    QString error;
+    Config config = Config::load(path, &error);
+    if (!error.isEmpty())
+        return fail(tr("Couldn't read %1: %2").arg(path, error), json);
+    Profile &profile = config.current();
+    profile.effects = how == "toggle" ? !profile.effects : how == "on";
+    if (!config.save(path, &error))
+        return fail(tr("Couldn't save %1: %2").arg(path, error), json);
+    // As with `vox use`: harmless when Vox is off, which reads the saved
+    // profile when it starts.
+    execute("pw-cli", PipeWireAudio::applyArguments(Chain::pod(Chain::params(config.current()))));
+    if (json)
+        printJson({{"ok", true}, {"profile", profile.name}, {"effects", profile.effects}});
+    else
+        out(profile.effects ? tr("Effects are on for %1.").arg(profile.name) : tr("Effects are off for %1.").arg(profile.name));
+    return 0;
+}
+
+// Copies the plugin, compiled into vox, into OpenDeck's plugins, replacing
+// an older copy; OpenDeck picks it up when it next starts.
+int installOpenDeckPlugin(bool json) {
+    const QString config = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/opendeck";
+    if (!QFileInfo::exists(config))
+        return fail(tr("OpenDeck isn't set up here (no %1). Open OpenDeck once, then try again.").arg(config), json);
+    const QString target = config + "/plugins/" + OpenDeckPlugin::Uuid + ".sdPlugin";
+    QDir(target).removeRecursively();
+    QDirIterator files(":/opendeck", QDir::Files, QDirIterator::Subdirectories);
+    while (files.hasNext()) {
+        const QString source = files.next();
+        const QString path = target + source.mid(QString(":/opendeck").size());
+        QDir().mkpath(QFileInfo(path).absolutePath());
+        if (!QFile::copy(source, path))
+            return fail(tr("Couldn't write %1").arg(path), json);
+        // Copies out of the resources are read-only; the launcher must run.
+        const bool launcher = path.endsWith("/bin/vox-opendeck");
+        QFile::setPermissions(path, QFile::ReadOwner | QFile::WriteOwner | QFile::ReadGroup | QFile::ReadOther
+                                        | (launcher ? QFile::ExeOwner | QFile::ExeGroup | QFile::ExeOther
+                                                    : QFile::Permissions()));
+    }
+    if (json)
+        printJson({{"ok", true}, {"path", target}});
+    else
+        out(tr("Installed the Vox plugin into OpenDeck. Restart OpenDeck to load it."));
+    return 0;
+}
+
+// Run by OpenDeck with the Stream Deck SDK's arguments: -port, -pluginUUID,
+// -registerEvent and -info.
+int runOpenDeckPlugin(const QStringList &arguments) {
+    auto value = [&](const QString &name) { return arguments.value(arguments.indexOf(name) + 1); };
+    const int port = value("-port").toInt();
+    if (port <= 0)
+        return fail(tr("vox opendeck is started by OpenDeck; to add the plugin, run: vox opendeck install"), false);
+    CliVoxControl vox;
+    OpenDeckPlugin plugin(&vox);
+    QObject::connect(&plugin, &OpenDeckPlugin::disconnected, qApp, [] { QCoreApplication::exit(0); });
+    plugin.connectTo(port, value("-registerEvent"), value("-pluginUUID"));
+    return QCoreApplication::exec();
+}
+
 int service(bool on, bool json) {
     if (on) {
         const QStringList missing = Chain::missingPackages();
@@ -377,6 +446,10 @@ int run(const QStringList &arguments) {
         return use(rest.join(' '), json);
     if (command == "on" || command == "off")
         return service(command == "on", json);
+    if (command == "effects")
+        return effects(rest.value(0, "toggle"), json);
+    if (command == "opendeck")
+        return rest.value(0) == "install" ? installOpenDeckPlugin(json) : runOpenDeckPlugin(rest);
     if (command == "sounds")
         return sounds(json);
     if (command == "play")

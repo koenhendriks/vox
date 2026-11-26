@@ -82,9 +82,16 @@ int main(int argc, char *argv[]) {
     engine.rootContext()->setContextProperty("soundboard", &soundboard);
     engine.rootContext()->setContextProperty("trayIcons", &trayIcons);
     engine.rootContext()->setContextProperty("shell", &shell);
-    QObject::connect(&instance, &Instance::command, &shell, [&shell](const QString &command) {
+    // Besides opening the window, the running Vox plays and stops sounds for
+    // the Stream Deck plugin, so they behave as if clicked: spamming, the
+    // copy limit, the lit tiles and S all apply.
+    QObject::connect(&instance, &Instance::command, &shell, [&shell, &soundboard, &backend](const QString &command) {
         if (command == "open")
             shell.showWindow();
+        else if (command.startsWith("play "))
+            soundboard.play(backend.config().findSound(command.mid(5)));
+        else if (command == "stop")
+            soundboard.stopAll();
     });
 
     // The tray goes before the engine does; its bindings read the context.

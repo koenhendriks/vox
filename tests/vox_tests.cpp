@@ -25,6 +25,9 @@
 #include "trayicon.h"
 #include <QImage>
 #include <QSignalSpy>
+#include <QWebSocket>
+#include <QWebSocketServer>
+#include "opendeck.h"
 
 class VoxTests : public QObject {
     Q_OBJECT
@@ -398,6 +401,92 @@ private slots:
         QVERIFY(filters.contains("asetnsamples=n=4096:p=0"));
         QCOMPARE(arguments.last(), QString("out.flac.part"));
         QCOMPARE(arguments.at(arguments.indexOf("-i") + 1), QString("in.mp3"));
+    }
+
+    void openDeckPluginDrivesVoxAndShowsItsState()
+    {
+        class FakeVox : public VoxControl {
+        public:
+            Config state = Config::defaults();
+            QStringList asked;
+            Config config() const override { return state; }
+            void useProfile(const QString &name) override { asked << "use " + name; }
+            void toggleEffects() override { asked << "effects"; }
+            void setRunning(bool running) override { asked << (running ? "on" : "off"); }
+            void refreshRunning() override { asked << "refresh"; }
+            void playSound(const QString &name) override { asked << "play " + name; }
+            void stopSounds() override { asked << "stop"; }
+        } vox;
+        vox.state.sounds = {{"Air horn", "air-horn.flac"}};
+
+        // The test is OpenDeck: a WebSocket server the plugin connects to.
+        QWebSocketServer server("opendeck", QWebSocketServer::NonSecureMode);
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        // Listened to from the moment it connects, or the registration,
+        // sent at once, slips past.
+        QWebSocket *deck = nullptr;
+        QList<QJsonObject> heard;
+        connect(&server, &QWebSocketServer::newConnection, this, [&] {
+            deck = server.nextPendingConnection();
+            connect(deck, &QWebSocket::textMessageReceived, this, [&](const QString &text) {
+                heard << QJsonDocument::fromJson(text.toUtf8()).object();
+            });
+        });
+        OpenDeckPlugin plugin(&vox);
+        plugin.connectTo(server.serverPort(), "registerPlugin", "plugin-1");
+        QTRY_VERIFY(deck);
+        auto say = [&](const QJsonObject &message) {
+            deck->sendTextMessage(QString::fromUtf8(QJsonDocument(message).toJson(QJsonDocument::Compact)));
+        };
+        auto last = [&](const QString &event, const QString &context) {
+            for (int i = int(heard.size()) - 1; i >= 0; --i)
+                if (heard[i].value("event") == event && heard[i].value("context") == context)
+                    return heard[i];
+            return QJsonObject();
+        };
+        QTRY_VERIFY(!heard.isEmpty());
+        QCOMPARE(heard.first().value("event").toString(), QString("registerPlugin"));
+        QCOMPARE(heard.first().value("uuid").toString(), QString("plugin-1"));
+
+        // A Profile key titles itself and lights up while its profile is active.
+        say({{"event", "willAppear"}, {"action", OpenDeckPlugin::ProfileAction}, {"context", "k1"},
+             {"payload", QJsonObject{{"settings", QJsonObject{{"profile", "Broadcast"}}}}}});
+        QTRY_VERIFY(!last("setState", "k1").isEmpty());
+        QCOMPARE(last("setTitle", "k1").value("payload").toObject().value("title").toString(), QString("Broadcast"));
+        QCOMPARE(last("setState", "k1").value("payload").toObject().value("state").toInt(), 0);
+        vox.state.active = 1;  // Broadcast, switched in the window
+        emit vox.configChanged();
+        QTRY_COMPARE(last("setState", "k1").value("payload").toObject().value("state").toInt(), 1);
+        say({{"event", "keyDown"}, {"action", OpenDeckPlugin::ProfileAction}, {"context", "k1"},
+             {"payload", QJsonObject{{"settings", QJsonObject{{"profile", "Broadcast"}}}}}});
+        QTRY_VERIFY(vox.asked.contains("use Broadcast"));
+
+        // Sound keys play, and a key not set up yet alerts instead.
+        say({{"event", "keyDown"}, {"action", OpenDeckPlugin::SoundAction}, {"context", "k2"},
+             {"payload", QJsonObject{{"settings", QJsonObject{{"sound", "Air horn"}}}}}});
+        say({{"event", "keyDown"}, {"action", OpenDeckPlugin::SoundAction}, {"context", "k3"},
+             {"payload", QJsonObject{{"settings", QJsonObject()}}}});
+        QTRY_VERIFY(vox.asked.contains("play Air horn"));
+        QTRY_VERIFY(!last("showAlert", "k3").isEmpty());
+
+        // The Vox Microphone key shows and flips the service.
+        say({{"event", "willAppear"}, {"action", OpenDeckPlugin::PowerAction}, {"context", "k4"}, {"payload", QJsonObject()}});
+        QTRY_VERIFY(vox.asked.contains("refresh"));
+        emit vox.runningChanged(true);
+        QTRY_COMPARE(last("setState", "k4").value("payload").toObject().value("state").toInt(), 1);
+        say({{"event", "keyDown"}, {"action", OpenDeckPlugin::PowerAction}, {"context", "k4"}, {"payload", QJsonObject()}});
+        QTRY_VERIFY(vox.asked.contains("off"));
+
+        say({{"event", "keyDown"}, {"action", OpenDeckPlugin::EffectsAction}, {"context", "k5"}, {"payload", QJsonObject()}});
+        say({{"event", "keyDown"}, {"action", OpenDeckPlugin::StopAction}, {"context", "k6"}, {"payload", QJsonObject()}});
+        QTRY_VERIFY(vox.asked.contains("effects") && vox.asked.contains("stop"));
+
+        // The settings page gets the lists to pick from.
+        say({{"event", "propertyInspectorDidAppear"}, {"action", OpenDeckPlugin::SoundAction}, {"context", "k2"}});
+        QTRY_VERIFY(!last("sendToPropertyInspector", "k2").isEmpty());
+        const QJsonObject lists = last("sendToPropertyInspector", "k2").value("payload").toObject();
+        QCOMPARE(lists.value("sounds").toArray(), QJsonArray({"Air horn"}));
+        QCOMPARE(lists.value("profiles").toArray().size(), 4);
     }
 
     void soundboardReportsAFailedImport()

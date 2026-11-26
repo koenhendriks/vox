@@ -1,4 +1,4 @@
-QT += core gui qml quick quickcontrols2 multimedia network dbus
+QT += core gui qml quick quickcontrols2 multimedia network dbus websockets
 
 CONFIG += c++20 release
 TARGET = vox
@@ -26,6 +26,7 @@ HEADERS += \
     src/filepicker.h \
     src/instance.h \
     src/meter.h \
+    src/opendeck.h \
     src/pipewireaudio.h \
     src/portalfilepicker.h \
     src/player.h \
@@ -45,6 +46,7 @@ SOURCES += \
     src/config.cpp \
     src/instance.cpp \
     src/meter.cpp \
+    src/opendeck.cpp \
     src/pipewireaudio.cpp \
     src/portalfilepicker.cpp \
     src/player.cpp \

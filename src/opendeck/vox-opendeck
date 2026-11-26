@@ -1,0 +1,4 @@
+#!/bin/sh
+# OpenDeck starts this with the Stream Deck SDK's arguments; the plugin is
+# part of the vox binary.
+exec vox opendeck "$@"

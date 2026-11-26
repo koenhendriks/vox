@@ -1,0 +1,26 @@
+body {
+    margin: 0;
+    padding: 8px 4px;
+    font: 13px ui-sans-serif, system-ui, sans-serif;
+    color: #e8e8ea;
+    background: transparent;
+}
+label {
+    display: block;
+    margin-bottom: 6px;
+    color: #9b9ba3;
+}
+select {
+    width: 100%;
+    padding: 6px 8px;
+    font: inherit;
+    color: inherit;
+    background: #24242a;
+    border: 1px solid #34343b;
+    border-radius: 4px;
+}
+.hint {
+    margin: 10px 0 0;
+    color: #9b9ba3;
+    font-size: 12px;
+}

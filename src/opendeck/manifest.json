@@ -1,0 +1,71 @@
+{
+  "Name": "Vox",
+  "Description": "Switch Vox profiles, play the soundboard, and turn effects and the Vox Microphone on and off.",
+  "Author": "Koen Hendriks",
+  "URL": "https://github.com/koenhendriks/vox",
+  "Version": "1.0.0",
+  "SDKVersion": 2,
+  "Icon": "icons/plugin",
+  "Category": "Vox",
+  "CategoryIcon": "icons/plugin",
+  "CodePath": "bin/vox-opendeck",
+  "CodePathLin": "bin/vox-opendeck",
+  "CodePaths": {
+    "x86_64-unknown-linux-gnu": "bin/vox-opendeck",
+    "aarch64-unknown-linux-gnu": "bin/vox-opendeck"
+  },
+  "OS": [{ "Platform": "linux" }],
+  "Software": { "MinimumVersion": "6.0" },
+  "Actions": [
+    {
+      "UUID": "com.koenhendriks.vox.profile",
+      "Name": "Profile",
+      "Tooltip": "Switch to a Vox profile; lit while it's the active one",
+      "Icon": "icons/action-profile",
+      "PropertyInspectorPath": "profile.html",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "SupportedInMultiActions": true,
+      "States": [{ "Image": "icons/key-profile" }, { "Image": "icons/key-profile-active" }]
+    },
+    {
+      "UUID": "com.koenhendriks.vox.sound",
+      "Name": "Sound",
+      "Tooltip": "Play a sound from the soundboard into the Vox Microphone",
+      "Icon": "icons/action-sound",
+      "PropertyInspectorPath": "sound.html",
+      "Controllers": ["Keypad"],
+      "SupportedInMultiActions": true,
+      "States": [{ "Image": "icons/key-sound" }]
+    },
+    {
+      "UUID": "com.koenhendriks.vox.effects",
+      "Name": "Effects",
+      "Tooltip": "Turn the active profile's effects on or off",
+      "Icon": "icons/action-effects",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "SupportedInMultiActions": true,
+      "States": [{ "Image": "icons/key-effects" }, { "Image": "icons/key-effects-on" }]
+    },
+    {
+      "UUID": "com.koenhendriks.vox.power",
+      "Name": "Vox Microphone",
+      "Tooltip": "Turn the Vox Microphone on or off",
+      "Icon": "icons/action-power",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "SupportedInMultiActions": true,
+      "States": [{ "Image": "icons/key-power" }, { "Image": "icons/key-power-on" }]
+    },
+    {
+      "UUID": "com.koenhendriks.vox.stop",
+      "Name": "Stop sounds",
+      "Tooltip": "Stop every sound the soundboard is playing",
+      "Icon": "icons/action-stop",
+      "Controllers": ["Keypad"],
+      "SupportedInMultiActions": true,
+      "States": [{ "Image": "icons/key-stop" }]
+    }
+  ]
+}

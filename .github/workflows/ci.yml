@@ -25,7 +25,7 @@ jobs:
       - name: Install build dependencies
         run: |
           pacman -Syu --noconfirm --needed base-devel git \
-            qt6-base qt6-declarative qt6-multimedia qt6-svg qt6-wayland
+            qt6-base qt6-declarative qt6-multimedia qt6-svg qt6-wayland qt6-websockets
 
       - uses: actions/checkout@v7
 

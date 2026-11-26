@@ -109,6 +109,31 @@ otherwise mangle them. To get there they play into an output called **Vox
 Soundboard**, which shows up in your sound settings; anything you play into
 it is heard in the call.
 
+## Stream Deck
+
+With [OpenDeck](https://github.com/nekename/OpenDeck), Vox's profiles,
+soundboard and switches go on Stream Deck keys. Add the plugin once, then
+restart OpenDeck:
+
+```sh
+vox opendeck install
+```
+
+The **Vox** category then has five actions:
+
+| Action | Press | The key shows |
+| --- | --- | --- |
+| Profile | Switches to the profile picked in its settings | Lit while that profile is active |
+| Sound | Plays the sound picked in its settings, again on every press | The sound's name |
+| Effects | Turns the active profile's effects on or off | Whether they're on |
+| Vox Microphone | Turns the Vox Microphone on or off | Whether it's on |
+| Stop sounds | Stops every sound playing | |
+
+Keys follow changes made anywhere, in the window, the tray or with `vox`.
+Sounds play through the running Vox, so spamming, the eight-copy limit and S
+work as they do in the window. After updating Vox, run `vox opendeck install`
+again to update the plugin.
+
 ## Test recording
 
 Press **Record a test** (or T), say a few sentences, and press it again. Vox
@@ -187,6 +212,8 @@ vox use broadcast     # switch profile live, by name or number
 vox on                # start the Vox Microphone, now and at login
 vox off
 vox default           # make it the default microphone
+vox effects           # turn the profile's effects on or off (or: vox effects on)
+vox opendeck install  # add the Vox plugin to OpenDeck, for Stream Deck keys
 vox sounds            # the soundboard's sounds, numbered
 vox play "air horn"   # play a sound into the call, by name or number
 vox skill install     # install a skill so coding agents can drive Vox
