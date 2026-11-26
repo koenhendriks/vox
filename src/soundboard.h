@@ -31,9 +31,16 @@ public:
     int importing() const { return int(m_imports.size()); }
     QString directory() const { return m_directory; }
 
-    // Plays a sound, or stops it when it is already playing.
+    // Plays another copy of a sound, over any still playing, so a horn can
+    // be pressed three times for three toots.
     Q_INVOKABLE void play(int index);
+    // Stops every copy of one sound.
+    Q_INVOKABLE void stop(int index);
     Q_INVOKABLE void stopAll();
+
+    // More copies of one sound than this and the oldest stops: hammering a
+    // button shouldn't pile up players without end.
+    static constexpr int MaxCopies = 8;
     // File paths or file:// URLs, as a drop or the file chooser gives them.
     Q_INVOKABLE void add(const QVariantList &files);
     Q_INVOKABLE void choose();
@@ -57,6 +64,7 @@ private:
     void imported(const QString &id, bool ok, const QString &error);
     void import(const QString &path, const QString &replaces);
     void finished(const QString &id, bool ok);
+    void stopFile(const QString &file);
 
     AudioSystem *m_audio;
     Backend *m_backend;
@@ -66,7 +74,11 @@ private:
         QString name;
         QString replaces;  // the file of the sound it replaces, if any
     };
-    QSet<QString> m_playing;           // by file
+    // The copies playing of each sound, by file, oldest first, and which
+    // sound each copy is.
+    QHash<QString, QStringList> m_playing;
+    QHash<QString, QString> m_copyFile;
+    quint64 m_copies = 0;
     QHash<QString, Import> m_imports;  // by the file being written
     // What the open file chooser is for: a sound's file to replace, or
     // empty to add new sounds.

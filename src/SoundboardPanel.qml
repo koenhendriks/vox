@@ -198,6 +198,15 @@ Rectangle {
                             elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
+                        // How many copies are playing on top of each other.
+                        Label {
+                            visible: tile.modelData.copies > 1
+                            text: "×" + tile.modelData.copies
+                            color: theme.accentForeground
+                            font.pixelSize: 11
+                            font.weight: Font.DemiBold
+                            font.features: { "tnum": 1 }
+                        }
                     }
                 }
                 // A file dropped on a sound replaces it; dropped anywhere else
@@ -235,6 +244,14 @@ Rectangle {
                 Menu {
                     id: menu
                     Material.roundedScale: theme.radius
+                    // A click always plays another copy, so stopping lives
+                    // here, shown while the sound plays.
+                    MenuItem {
+                        text: qsTr("Stop")
+                        visible: tile.modelData.playing
+                        height: visible ? implicitHeight : 0
+                        onTriggered: soundboard.stop(tile.index)
+                    }
                     MenuItem {
                         text: qsTr("Replace…")
                         onTriggered: soundboard.chooseReplacement(tile.index)

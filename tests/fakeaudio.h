@@ -21,6 +21,7 @@ public:
     QStringList captureTargets;
     QList<QByteArray> nextCapture;
     QStringList played;            // "id volume monitor", in order
+    QStringList stopped;           // ids, in order
     bool importFails = false;
 
     void refresh() override { emit statusChanged(status); }
@@ -50,7 +51,10 @@ public:
     void playSound(const QString &id, const QString &, double volume, bool monitor) override {
         played << QString("%1 %2 %3").arg(id).arg(volume).arg(monitor);
     }
-    void stopSound(const QString &id) override { emit soundFinished(id, true); }
+    void stopSound(const QString &id) override {
+        stopped << id;
+        emit soundFinished(id, true);
+    }
     void stopCapture() override {
         captureTargets.clear();
         emit captured(nextCapture);

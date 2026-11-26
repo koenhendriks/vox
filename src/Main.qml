@@ -89,7 +89,9 @@ ApplicationWindow {
     Repeater {
         model: 9
         Item {
-            Shortcut { sequence: "Ctrl+" + (index + 1); context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: soundboard.play(index) }
+            // No auto-repeat: holding the key down would fire a horn about
+            // thirty times a second. Spamming is pressing it again.
+            Shortcut { sequence: "Ctrl+" + (index + 1); autoRepeat: false; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: soundboard.play(index) }
         }
     }
     Shortcut { sequence: "O"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: backend.setRunning(!backend.running) }

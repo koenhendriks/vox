@@ -417,11 +417,56 @@ private slots:
         board.setMonitor(false);
         board.play(0);
         const QString file = board.sounds().first().toMap().value("file").toString();
-        QCOMPARE(audio.played, QStringList({file + " 0.5 0"}));
+        QCOMPARE(audio.played, QStringList({file + "#1 0.5 0"}));
         QVERIFY(board.playing());
         QVERIFY(board.sounds().first().toMap().value("playing").toBool());
-        board.play(0);  // a second press stops it
+    }
+
+    void pressingASoundAgainPlaysItAgain()
+    {
+        QTemporaryDir dir;
+        FakeAudio audio;
+        audio.status = FakeAudio::sample();
+        audio.setRunning(true);
+        Backend backend(&audio, dir.filePath("config.json"), plugins(dir));
+        Soundboard board(&audio, &backend, nullptr, dir.filePath("sounds"));
+        const QString horn = board.sounds().at(0).toMap().value("file").toString();
+
+        // Three presses, three toots on top of each other.
+        board.play(0);
+        board.play(0);
+        board.play(0);
+        board.play(1);
+        QCOMPARE(audio.played.size(), 4);
+        QVERIFY(audio.stopped.isEmpty());
+        QCOMPARE(board.sounds().at(0).toMap().value("copies").toInt(), 3);
+
+        // One copy ending leaves the others playing.
+        emit audio.soundFinished(horn + "#2", true);
+        QCOMPARE(board.sounds().at(0).toMap().value("copies").toInt(), 2);
+
+        // Stop silences every copy of that sound, and only that sound.
+        board.stop(0);
+        QCOMPARE(audio.stopped, QStringList({horn + "#1", horn + "#3"}));
+        QVERIFY(!board.sounds().at(0).toMap().value("playing").toBool());
+        QVERIFY(board.sounds().at(1).toMap().value("playing").toBool());
+        board.stopAll();
         QVERIFY(!board.playing());
+    }
+
+    void spamStopsTheOldestCopyBeyondTheLimit()
+    {
+        QTemporaryDir dir;
+        FakeAudio audio;
+        audio.status = FakeAudio::sample();
+        audio.setRunning(true);
+        Backend backend(&audio, dir.filePath("config.json"), plugins(dir));
+        Soundboard board(&audio, &backend, nullptr, dir.filePath("sounds"));
+        const QString horn = board.sounds().at(0).toMap().value("file").toString();
+        for (int i = 0; i < Soundboard::MaxCopies + 2; ++i)
+            board.play(0);
+        QCOMPARE(board.sounds().at(0).toMap().value("copies").toInt(), Soundboard::MaxCopies);
+        QCOMPARE(audio.stopped, QStringList({horn + "#1", horn + "#2"}));
     }
 
     void soundsRoundTripAndStayInsideTheirDirectory()

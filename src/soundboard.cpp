@@ -93,7 +93,8 @@ QVariantList Soundboard::sounds() const {
     const auto &sounds = m_backend->config().sounds;
     for (int i = 0; i < sounds.size(); ++i)
         list << QVariantMap{{"name", sounds[i].name}, {"file", sounds[i].file},
-                            {"playing", m_playing.contains(sounds[i].file)}};
+                            {"playing", m_playing.contains(sounds[i].file)},
+                            {"copies", int(m_playing.value(sounds[i].file).size())}};
     return list;
 }
 
@@ -110,33 +111,56 @@ void Soundboard::play(int index) {
     if (index < 0 || index >= sounds.size())
         return;
     const Sound &sound = sounds[index];
-    if (m_playing.contains(sound.file)) {
-        m_audio->stopSound(sound.file);
-        return;
-    }
     if (!m_backend->running() || m_backend->sourceMissing()) {
         m_backend->reportError(tr("Turn on the Vox Microphone to play sounds into your calls."));
         return;
     }
-    m_playing.insert(sound.file);
+    QStringList &copies = m_playing[sound.file];
+    if (copies.size() >= MaxCopies) {
+        // Forgotten before it ends, so the new copy fits at once.
+        const QString oldest = copies.takeFirst();
+        m_copyFile.remove(oldest);
+        m_audio->stopSound(oldest);
+    }
+    const QString copy = QString("%1#%2").arg(sound.file).arg(++m_copies);
+    copies.append(copy);
+    m_copyFile.insert(copy, sound.file);
     emit soundsChanged();
-    m_audio->playSound(sound.file, m_directory + "/" + sound.file, volume() / 100.0, monitor());
+    m_audio->playSound(copy, m_directory + "/" + sound.file, volume() / 100.0, monitor());
+}
+
+void Soundboard::stop(int index) {
+    const auto &sounds = m_backend->config().sounds;
+    if (index >= 0 && index < sounds.size())
+        stopFile(sounds[index].file);
+}
+
+void Soundboard::stopFile(const QString &file) {
+    for (const auto &copy : m_playing.value(file))
+        m_audio->stopSound(copy);
 }
 
 void Soundboard::stopAll() {
-    for (const auto &file : QSet<QString>(m_playing))
-        m_audio->stopSound(file);
+    for (const auto &file : m_playing.keys())
+        stopFile(file);
 }
 
 void Soundboard::finished(const QString &id, bool ok) {
-    if (!m_playing.remove(id))
+    if (!m_copyFile.contains(id))
         return;
+    const QString file = m_copyFile.take(id);
+    auto it = m_playing.find(file);
+    if (it != m_playing.end()) {
+        it->removeAll(id);
+        if (it->isEmpty())
+            m_playing.erase(it);
+    }
     emit soundsChanged();
     if (ok)
         return;
-    QString name = id;
+    QString name = file;
     for (const auto &sound : m_backend->config().sounds)
-        if (sound.file == id)
+        if (sound.file == file)
             name = sound.name;
     m_backend->reportError(tr("%1 couldn't play into the Vox Microphone. Is Vox on?").arg(name));
 }
@@ -205,8 +229,7 @@ void Soundboard::imported(const QString &id, bool ok, const QString &error) {
         config.soundsKnown = true;
         for (auto &sound : config.sounds) {
             if (!pending.replaces.isEmpty() && sound.file == pending.replaces) {
-                if (m_playing.contains(sound.file))
-                    m_audio->stopSound(sound.file);
+                stopFile(sound.file);
                 sound.file = id;
                 return;
             }
@@ -246,8 +269,7 @@ void Soundboard::remove(int index) {
     const auto &sounds = m_backend->config().sounds;
     if (index < 0 || index >= sounds.size())
         return;
-    if (m_playing.contains(sounds[index].file))
-        m_audio->stopSound(sounds[index].file);
+    stopFile(sounds[index].file);
     m_backend->changeConfig([&](Config &config) { config.sounds.removeAt(index); });
 }
 

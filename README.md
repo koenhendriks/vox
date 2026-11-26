@@ -86,8 +86,11 @@ out of a call.
 ## Soundboard
 
 The soundboard sits under the profiles. Click a sound to play it into the Vox
-Microphone, so everyone in the call hears it; click it again, or press S, to
-stop. Ctrl+1 to 9 plays the first nine, and the tray menu has them too, for
+Microphone, so everyone in the call hears it. Click it again to play it again
+on top, so three clicks on a short horn are three toots; up to eight copies of
+a sound play at once, and more stop the oldest. Right-click a playing sound
+and pick **Stop**, or press S to stop them all. Ctrl+1 to 9 plays the first
+nine, and the tray menu has them too, for
 when the window is closed. It starts with an air horn, applause, a rimshot and
 a sad trombone, synthesised for Vox.
 
