@@ -13,6 +13,8 @@
 #include "cli.h"
 #include "instance.h"
 #include "pipewireaudio.h"
+#include "portalfilepicker.h"
+#include "soundboard.h"
 #include "testrecorder.h"
 #include "theme.h"
 #include "translator.h"
@@ -64,6 +66,8 @@ int main(int argc, char *argv[]) {
     PipeWireAudio audio;
     Backend backend(&audio);
     TestRecorder tester(&audio, &backend);
+    PortalFilePicker picker;
+    Soundboard soundboard(&audio, &backend, &picker);
     TrayIcons trayIcons;
     QObject::connect(&app, &QGuiApplication::aboutToQuit, &backend, &Backend::shutdown);
 
@@ -75,6 +79,7 @@ int main(int argc, char *argv[]) {
     engine.rootContext()->setContextProperty("theme", &theme);
     engine.rootContext()->setContextProperty("backend", &backend);
     engine.rootContext()->setContextProperty("tester", &tester);
+    engine.rootContext()->setContextProperty("soundboard", &soundboard);
     engine.rootContext()->setContextProperty("trayIcons", &trayIcons);
     engine.rootContext()->setContextProperty("shell", &shell);
     QObject::connect(&instance, &Instance::command, &shell, [&shell](const QString &command) {

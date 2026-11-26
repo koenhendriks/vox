@@ -58,6 +58,7 @@ ApplicationWindow {
         return Number(value).toLocaleString(Qt.locale(), 'f', decimals)
     }
     function renameCurrent() {
+        renameDialog.kind = "profile"
         renameDialog.index = backend.activeIndex
         renameDialog.open()
     }
@@ -84,6 +85,13 @@ ApplicationWindow {
     Shortcut { sequence: "Tab"; context: Qt.ApplicationShortcut; enabled: !win.typing && tester.state === "ready"; onActivated: tester.switchTrack() }
     Shortcut { sequence: "L"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: backend.toggleListening() }
     Shortcut { sequence: "E"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: backend.edit("effects", !backend.current.effects) }
+    Shortcut { sequence: "S"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: soundboard.stopAll() }
+    Repeater {
+        model: 9
+        Item {
+            Shortcut { sequence: "Ctrl+" + (index + 1); context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: soundboard.play(index) }
+        }
+    }
     Shortcut { sequence: "O"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: backend.setRunning(!backend.running) }
     Shortcut { sequence: "D"; context: Qt.ApplicationShortcut; enabled: !win.typing && backend.running; onActivated: backend.makeDefault() }
     Shortcut { sequence: "N"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: { backend.newProfile(); win.renameCurrent() } }
@@ -205,12 +213,32 @@ ApplicationWindow {
                 Layout.fillHeight: true
                 spacing: 0
 
-                ProfileList {
+                ColumnLayout {
                     Layout.preferredWidth: 230
+                    Layout.maximumWidth: 230
                     Layout.fillHeight: true
-                    onRenameRequested: win.renameCurrent()
-                    onDeleteRequested: win.deleteCurrent()
-                    onNewRequested: { backend.newProfile(); win.renameCurrent() }
+                    spacing: 0
+                    ProfileList {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        // Room for the header, three profiles and the buttons
+                        // however many sounds there are.
+                        Layout.minimumHeight: 260
+                        onRenameRequested: win.renameCurrent()
+                        onDeleteRequested: win.deleteCurrent()
+                        onNewRequested: { backend.newProfile(); win.renameCurrent() }
+                    }
+                    Rectangle { Layout.fillWidth: true; height: 1; color: win.line }
+                    SoundboardPanel {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: implicitHeight
+                        Layout.minimumHeight: 100
+                        onRenameRequested: index => {
+                            renameDialog.kind = "sound"
+                            renameDialog.index = index
+                            renameDialog.open()
+                        }
+                    }
                 }
                 Rectangle { Layout.fillHeight: true; width: 1; color: win.line }
 

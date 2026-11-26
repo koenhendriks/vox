@@ -40,14 +40,29 @@ struct Profile {
     bool operator==(const Profile &other) const = default;
 };
 
+struct Sound {
+    QString name;
+    QString file;  // a file name inside the sounds directory, which Vox owns
+    bool operator==(const Sound &other) const = default;
+};
+
 struct Config {
     // A PipeWire node.name; empty until a microphone has been picked.
     QString microphone;
     int active = 0;
     QList<Profile> profiles;
+    // The soundboard is the same whichever profile is active.
+    QList<Sound> sounds;
+    // False until the soundboard has been set up once, so the starter sounds
+    // are added a single time and stay removed once the user removes them.
+    bool soundsKnown = false;
+    double soundVolume = 80;   // percent
+    bool soundMonitor = true;  // also play sounds to the user's own output
 
     static Config defaults();
     static QString defaultPath();
+    static QString defaultSoundsDirectory();
+    int findSound(const QString &nameOrNumber) const;
 
     const Profile &current() const { return profiles.at(active); }
     Profile &current() { return profiles[active]; }

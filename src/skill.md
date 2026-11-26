@@ -21,6 +21,8 @@ errors to stderr.
 | `vox use <name or number>` | Switch profile live (and for the next start) |
 | `vox on` / `vox off` | Start or stop the Vox Microphone, now and at login |
 | `vox default` | Make the Vox Microphone the default microphone |
+| `vox sounds` | The soundboard's sounds, numbered from 1 |
+| `vox play <name or number>` | Play a sound into the Vox Microphone, so the call hears it; waits until it ends |
 | `vox open` | Open the window (needs a display); hands over to a running Vox |
 | `vox tray` | Show the tray icon without the window (runs at login) |
 

@@ -191,6 +191,35 @@ context.modules = [
                 # good. Linger makes WirePlumber wait and relink it instead.
                 node.linger = true
 %12            }
+            # The processed voice goes into the soundboard mix rather than
+            # straight to apps, so sounds join it after noise removal and
+            # auto-tune, which would otherwise mangle them.
+            playback.props = {
+                node.name = "%16"
+                node.description = "Vox (processed)"
+                target.object = "%17"
+                # Passive, so a mix nobody records doesn't keep the
+                # microphone open; linger and dont-fallback for the same
+                # reasons as on the capture side.
+                node.passive = true
+                node.dont-fallback = true
+                node.linger = true
+            }
+        }
+    }
+    { name = libpipewire-module-loopback
+        args = {
+            node.description = "Vox Microphone"
+            audio.channels = 1
+            audio.position = [ MONO ]
+            capture.props = {
+                node.name = "%17"
+                node.description = "Vox Soundboard"
+                media.class = Audio/Sink
+                # Never the default output: a real device always outranks it.
+                priority.session = 0
+                priority.driver = 0
+            }
             playback.props = {
                 node.name = "%13"
                 node.description = "Vox Microphone"
@@ -204,7 +233,7 @@ context.modules = [
         .arg(control("denoise"), control("denoisemix"), control("rumble"), control("bass"), control("mud"),
              control("presence"), control("air"), control("compressor"), control("limiter"))
         .arg(control("output"), CaptureName, target, SourceName)
-        .arg(control("autotune"), control("effectsmix"));
+        .arg(control("autotune"), control("effectsmix"), ProcessedName, MixName);
 }
 
 const QList<Plugin> &plugins() {

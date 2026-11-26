@@ -229,6 +229,14 @@ void Backend::reloadFromDisk() {
         m_audio->restart();
 }
 
+void Backend::changeConfig(const std::function<void(Config &)> &change, bool undoable) {
+    if (undoable)
+        beginEdit();
+    change(m_config);
+    emit configChanged();
+    m_saveTimer.start();
+}
+
 void Backend::beginEdit() {
     m_undo.append(m_config);
     if (m_undo.size() > UndoLimit)

@@ -70,6 +70,28 @@ SystemTrayIcon {
         }
 
         MenuSeparator {}
+        Menu {
+            id: sounds
+            title: qsTr("Soundboard")
+            enabled: soundboard.sounds.length > 0
+            Instantiator {
+                model: soundboard.sounds
+                delegate: MenuItem {
+                    required property int index
+                    required property var modelData
+                    text: modelData.name
+                    onTriggered: soundboard.play(index)
+                }
+                onObjectAdded: (index, object) => sounds.insertItem(index, object)
+                onObjectRemoved: (index, object) => sounds.removeItem(object)
+            }
+            MenuSeparator {}
+            MenuItem {
+                text: qsTr("Stop all sounds")
+                enabled: soundboard.playing
+                onTriggered: soundboard.stopAll()
+            }
+        }
         MenuItem {
             text: qsTr("Effects")
             checkable: true

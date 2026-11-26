@@ -2,6 +2,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
+#include <QUrl>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QTemporaryDir>
 #include <QtTest>
@@ -12,6 +14,7 @@
 #include "fakeaudio.h"
 #include "meter.h"
 #include "pipewireaudio.h"
+#include "soundboard.h"
 #include "player.h"
 #include "take.h"
 #include "testrecorder.h"
@@ -143,7 +146,9 @@ private slots:
         QVERIFY(conf.contains("node.linger = true"));
         QVERIFY(!conf.contains(QRegularExpression("%\\d")));
 
-        QVERIFY(!Chain::configuration(profile, {}).contains("target.object"));
+        // Without a microphone only the soundboard mix is targeted.
+        QCOMPARE(Chain::configuration(profile, {}).count("target.object"), 1);
+        QVERIFY(Chain::configuration(profile, {}).contains(R"(target.object = "vox.mix")"));
         QVERIFY(Chain::configuration(profile, "evil\" } ]").contains(R"(target.object = "")"));
     }
 
@@ -223,6 +228,162 @@ private slots:
         QVERIFY(conf.contains(R"({ output = "effectsmix:Out" input = "bass:In" })"));
         QVERIFY(!conf.contains(R"({ output = "rumble:Out" input = "bass:In" })"));
         QVERIFY(conf.contains(R"("mode" = 0.0000)"));
+    }
+
+    void voiceAndSoundsMeetInTheSoundboardMix()
+    {
+        const QString conf = Chain::configuration(Profile::presets().first(), "alsa_input.usb-studio");
+        // The filter chain plays into the mix, passively, and waits for it.
+        const QString playback = conf.section("playback.props = {", 1, 1).section("}", 0, 0);
+        QVERIFY(playback.contains(R"(node.name = "vox.processed")"));
+        QVERIFY(playback.contains(R"(target.object = "vox.mix")"));
+        QVERIFY(playback.contains("node.passive = true"));
+        QVERIFY(playback.contains("node.linger = true"));
+        QVERIFY(!playback.contains("Audio/Source"));
+        // A loopback turns the mix into the Vox Microphone, keeping its name
+        // so a default microphone set to Vox stays Vox.
+        const QString loopback = conf.section("libpipewire-module-loopback", 1);
+        QVERIFY(loopback.contains(R"(node.name = "vox.mix")"));
+        QVERIFY(loopback.contains("media.class = Audio/Sink"));
+        QVERIFY(loopback.contains("priority.session = 0"));
+        QVERIFY(loopback.contains(R"(node.name = "vox.microphone")"));
+        QVERIFY(loopback.contains("media.class = Audio/Source"));
+    }
+
+    void soundboardSetsUpStarterSoundsOnce()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.filePath("config.json"), sounds = dir.filePath("sounds");
+        {
+            FakeAudio audio;
+            Backend backend(&audio, path, plugins(dir));
+            Soundboard board(&audio, &backend, nullptr, sounds);
+            QCOMPARE(board.sounds().size(), 4);
+            for (const auto &sound : board.sounds())
+                QVERIFY(QFile::exists(sounds + "/" + sound.toMap().value("file").toString()));
+            while (!board.sounds().isEmpty())
+                board.remove(0);
+            backend.shutdown();
+        }
+        FakeAudio audio;
+        Backend backend(&audio, path, plugins(dir));
+        Soundboard board(&audio, &backend, nullptr, sounds);
+        QVERIFY2(board.sounds().isEmpty(), "removed starter sounds must not come back");
+        QVERIFY(QDir(sounds).entryList({"*.flac"}).isEmpty());
+    }
+
+    void configSavedBeforeTheSoundboardStillGetsStarters()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.filePath("config.json");
+        // An existing config, saved by `vox use` before the soundboard ran.
+        Config::defaults().save(path);
+        QVERIFY(!Config::load(path).soundsKnown);
+        FakeAudio audio;
+        Backend backend(&audio, path, plugins(dir));
+        Soundboard board(&audio, &backend, nullptr, dir.filePath("sounds"));
+        QCOMPARE(board.sounds().size(), 4);
+    }
+
+    void soundboardCleansUpOnlyWhenTheConfigIsReadable()
+    {
+        QTemporaryDir dir;
+        const QString sounds = dir.filePath("sounds");
+        QDir().mkpath(sounds);
+        write(sounds + "/orphan-123456.flac", "x");
+        {
+            FakeAudio audio;
+            Backend backend(&audio, dir.filePath("config.json"), plugins(dir));
+            Soundboard board(&audio, &backend, nullptr, sounds);
+            QVERIFY(!QFile::exists(sounds + "/orphan-123456.flac"));
+        }
+        write(dir.filePath("broken.json"), "{ not json");
+        write(sounds + "/mine-123456.flac", "x");
+        FakeAudio audio;
+        Backend backend(&audio, dir.filePath("broken.json"), plugins(dir));
+        Soundboard board(&audio, &backend, nullptr, sounds);
+        QVERIFY2(QFile::exists(sounds + "/mine-123456.flac"), "an unreadable config must not cost the user their sounds");
+    }
+
+    void soundboardImportsAndUndoesRemoval()
+    {
+        QTemporaryDir dir;
+        FakeAudio audio;
+        Backend backend(&audio, dir.filePath("config.json"), plugins(dir));
+        Soundboard board(&audio, &backend, nullptr, dir.filePath("sounds"));
+        const int starters = board.sounds().size();
+        write(dir.filePath("Big_Air-Horn.mp3"), "pretend audio");
+        board.add({QUrl::fromLocalFile(dir.filePath("Big_Air-Horn.mp3"))});
+        QCOMPARE(board.sounds().size(), starters + 1);
+        const QVariantMap added = board.sounds().last().toMap();
+        QCOMPARE(added.value("name").toString(), QString("Big Air Horn"));
+        QVERIFY(added.value("file").toString().startsWith("big-air-horn-"));
+        QVERIFY(QFile::exists(dir.filePath("sounds/" + added.value("file").toString())));
+        QVERIFY(QFile::exists(dir.filePath("Big_Air-Horn.mp3")));
+
+        board.remove(starters);
+        QCOMPARE(board.sounds().size(), starters);
+        backend.undo();
+        QCOMPARE(board.sounds().size(), starters + 1);
+        QVERIFY(QFile::exists(dir.filePath("sounds/" + added.value("file").toString())));
+
+        QVERIFY(board.rename(starters, "12").length() > 0);
+        QCOMPARE(board.rename(starters, "Horn"), QString());
+        QCOMPARE(board.sounds().last().toMap().value("name").toString(), QString("Horn"));
+    }
+
+    void soundboardReportsAFailedImport()
+    {
+        QTemporaryDir dir;
+        FakeAudio audio;
+        audio.status = FakeAudio::sample();
+        audio.importFails = true;
+        Backend backend(&audio, dir.filePath("config.json"), plugins(dir));
+        Soundboard board(&audio, &backend, nullptr, dir.filePath("sounds"));
+        const int before = board.sounds().size();
+        write(dir.filePath("notes.txt"), "not audio");
+        board.add({dir.filePath("notes.txt")});
+        QCOMPARE(board.sounds().size(), before);
+        QVERIFY(backend.problem().contains("Couldn't add Notes"));
+    }
+
+    void soundboardPlaysOnlyIntoARunningVox()
+    {
+        QTemporaryDir dir;
+        FakeAudio audio;
+        audio.status = FakeAudio::sample();
+        Backend backend(&audio, dir.filePath("config.json"), plugins(dir));
+        Soundboard board(&audio, &backend, nullptr, dir.filePath("sounds"));
+        board.play(0);
+        QVERIFY(audio.played.isEmpty());
+        QVERIFY(backend.problem().contains("Turn on the Vox Microphone"));
+
+        audio.setRunning(true);
+        board.setVolume(50);
+        board.setMonitor(false);
+        board.play(0);
+        const QString file = board.sounds().first().toMap().value("file").toString();
+        QCOMPARE(audio.played, QStringList({file + " 0.5 0"}));
+        QVERIFY(board.playing());
+        QVERIFY(board.sounds().first().toMap().value("playing").toBool());
+        board.play(0);  // a second press stops it
+        QVERIFY(!board.playing());
+    }
+
+    void soundsRoundTripAndStayInsideTheirDirectory()
+    {
+        Config config = Config::defaults();
+        config.sounds = {{"Horn", "horn-abc123.flac"}};
+        config.soundsKnown = true;
+        config.soundVolume = 40;
+        config.soundMonitor = false;
+        QCOMPARE(Config::fromJson(config.toJson()), config);
+        QJsonObject edited = config.toJson();
+        edited["sounds"] = QJsonArray{QJsonObject{{"name", "Evil"}, {"file", "../../.bashrc"}},
+                                      QJsonObject{{"name", "Hidden"}, {"file", ".x.flac"}}};
+        QVERIFY(Config::fromJson(edited).sounds.isEmpty());
+        QCOMPARE(Config::fromJson(edited).findSound("1"), -1);
+        QCOMPARE(config.findSound("horn"), 0);
     }
 
     void reportsMissingPlugins()

@@ -70,6 +70,8 @@ QString usage() {
               "  use <profile>       Switch profile, by name or number, live\n"
               "  on | off            Start or stop the Vox Microphone, now and at login\n"
               "  default             Make the Vox Microphone the default microphone\n"
+              "  sounds              List the soundboard's sounds\n"
+              "  play <sound>        Play a sound into the Vox Microphone, by name or number\n"
               "  engine              Run the audio engine (the vox service does this)\n"
               "  skill [install]     Print the skill for coding agents, or install it\n"
               "\n"
@@ -129,6 +131,70 @@ int status(bool json) {
         if (!error.isEmpty())
             out(tr("Config error: %1").arg(error));
     }
+    return 0;
+}
+
+int sounds(bool json) {
+    QString error;
+    const Config config = Config::load(Config::defaultPath(), &error);
+    if (!error.isEmpty())
+        return fail(tr("Couldn't read %1: %2").arg(Config::defaultPath(), error), json);
+    if (json) {
+        QJsonArray array;
+        for (int i = 0; i < config.sounds.size(); ++i)
+            array.append(QJsonObject{{"number", i + 1}, {"name", config.sounds[i].name}});
+        out(QJsonDocument(array).toJson(QJsonDocument::Indented).trimmed());
+        return 0;
+    }
+    if (config.sounds.isEmpty())
+        out(tr("The soundboard is empty; add sounds in the Vox window."));
+    for (int i = 0; i < config.sounds.size(); ++i)
+        out(QString("  %1. %2").arg(i + 1).arg(config.sounds[i].name));
+    return 0;
+}
+
+// Plays like the window does: into the mix, with no fallback to the speakers,
+// and to the user's own output as well when they hear sounds themselves.
+// Waits for the sound to end, so a key binding can't stack up a queue.
+int play(const QString &wanted, bool json) {
+    if (wanted.isEmpty())
+        return fail(tr("Say which sound: vox play <name or number>"), json);
+    QString error;
+    const Config config = Config::load(Config::defaultPath(), &error);
+    if (!error.isEmpty())
+        return fail(tr("Couldn't read %1: %2").arg(Config::defaultPath(), error), json);
+    const int index = config.findSound(wanted);
+    if (index < 0) {
+        QStringList names;
+        for (const auto &sound : config.sounds)
+            names << sound.name;
+        return fail(names.isEmpty() ? tr("The soundboard is empty; add sounds in the Vox window.")
+                                    : tr("There's no sound called %1. The sounds are: %2").arg(wanted, names.join(", ")),
+                    json);
+    }
+    const Sound &sound = config.sounds[index];
+    const QString file = Config::defaultSoundsDirectory() + "/" + sound.file;
+    if (!QFileInfo::exists(file))
+        return fail(tr("The file for %1 is missing: %2").arg(sound.name, file), json);
+    const QString volume = QString::number(config.soundVolume / 100.0, 'f', 3);
+    QProcess mix, monitor;
+    mix.start("pw-play", {"--target", Chain::MixName, "--volume", volume,
+                          "-P", "{ node.dont-fallback = true node.dont-reconnect = true node.description = \"Vox soundboard\" }",
+                          file});
+    if (!mix.waitForStarted(3000))
+        return fail(tr("pw-play is not installed."), json);
+    if (config.soundMonitor)
+        monitor.start("pw-play", {"--volume", volume, "-P", "{ node.description = \"Vox soundboard (you)\" }", file});
+    mix.waitForFinished(-1);
+    const bool ok = mix.exitStatus() == QProcess::NormalExit && mix.exitCode() == 0;
+    if (!ok) {
+        monitor.kill();
+        monitor.waitForFinished(1000);
+        return fail(tr("%1 couldn't play into the Vox Microphone. Turn it on with: vox on").arg(sound.name), json);
+    }
+    monitor.waitForFinished(5000);
+    if (json)
+        printJson({{"ok", true}, {"sound", sound.name}, {"number", index + 1}});
     return 0;
 }
 
@@ -311,6 +377,10 @@ int run(const QStringList &arguments) {
         return use(rest.join(' '), json);
     if (command == "on" || command == "off")
         return service(command == "on", json);
+    if (command == "sounds")
+        return sounds(json);
+    if (command == "play")
+        return play(rest.join(' '), json);
     if (command == "default")
         return makeDefault(json);
     if (command == "engine")

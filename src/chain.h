@@ -15,6 +15,10 @@ namespace Chain {
 
 inline constexpr auto SourceName = "vox.microphone";
 inline constexpr auto CaptureName = "vox.capture";
+// The processed voice and soundboard sounds both play into this sink; a
+// loopback offers its mix to apps as the Vox Microphone.
+inline constexpr auto MixName = "vox.mix";
+inline constexpr auto ProcessedName = "vox.processed";
 inline constexpr auto ServiceName = "vox.service";
 
 using Params = QList<QPair<QString, double>>;

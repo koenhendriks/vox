@@ -23,10 +23,13 @@ HEADERS += \
     src/chain.h \
     src/cli.h \
     src/config.h \
+    src/filepicker.h \
     src/instance.h \
     src/meter.h \
     src/pipewireaudio.h \
+    src/portalfilepicker.h \
     src/player.h \
+    src/soundboard.h \
     src/take.h \
     src/testrecorder.h \
     src/theme.h \
@@ -43,7 +46,9 @@ SOURCES += \
     src/instance.cpp \
     src/meter.cpp \
     src/pipewireaudio.cpp \
+    src/portalfilepicker.cpp \
     src/player.cpp \
+    src/soundboard.cpp \
     src/take.cpp \
     src/testrecorder.cpp \
     src/theme.cpp \

@@ -1,5 +1,6 @@
 #include "pipewireaudio.h"
 
+#include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -17,6 +18,10 @@ PipeWireAudio::PipeWireAudio(QObject *parent) : AudioSystem(parent) {
 }
 
 PipeWireAudio::~PipeWireAudio() {
+    for (const auto &playing : std::as_const(m_playing))
+        for (QProcess *process : {playing.mix, playing.monitor})
+            if (process)
+                process->kill();
     for (auto *process : findChildren<QProcess *>(Qt::FindDirectChildrenOnly)) {
         if (process == &m_loopback || process->state() == QProcess::NotRunning)
             continue;
@@ -224,4 +229,94 @@ void PipeWireAudio::stopCapture() {
     m_captures.clear();
     m_captureData.clear();
     emit captured(buffers);
+}
+
+void PipeWireAudio::importSound(const QString &id, const QString &source, const QString &target) {
+    // Written beside the target and renamed into place, so a failed or
+    // half-finished conversion never leaves a broken sound behind.
+    const QString partial = target + ".part";
+    auto *process = new QProcess(this);
+    connect(process, &QProcess::errorOccurred, this, [this, process, id](QProcess::ProcessError error) {
+        if (error != QProcess::FailedToStart)
+            return;
+        emit soundImported(id, false, tr("ffmpeg is not installed."));
+        process->deleteLater();
+    });
+    connect(process, &QProcess::finished, this, [this, process, id, partial, target](int code, QProcess::ExitStatus status) {
+        process->deleteLater();
+        if (status != QProcess::NormalExit || code != 0) {
+            QFile::remove(partial);
+            const QStringList lines = QString::fromUtf8(process->readAllStandardError()).trimmed().split('\n');
+            emit soundImported(id, false, lines.isEmpty() ? QString() : lines.last().trimmed());
+            return;
+        }
+        QFile::remove(target);
+        if (!QFile::rename(partial, target)) {
+            QFile::remove(partial);
+            emit soundImported(id, false, tr("Couldn't save the sound."));
+            return;
+        }
+        emit soundImported(id, true, {});
+    });
+    // Loudness-normalised to the starter sounds' level, so a horn found on
+    // the web isn't ten times louder than the voice it plays over. loudnorm
+    // emits one huge block on short input, which the FLAC encoder refuses.
+    process->start("ffmpeg", {"-hide_banner", "-loglevel", "error", "-y", "-i", source, "-vn", "-ac", "1",
+                              "-af", "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000,asetnsamples=n=4096",
+                              "-ar", "48000", "-c:a", "flac", "-f", "flac", partial});
+}
+
+void PipeWireAudio::playSound(const QString &id, const QString &file, double volume, bool monitor) {
+    stopSound(id);
+    const QString level = QString::number(std::clamp(volume, 0.0, 2.0), 'f', 3);
+    Playing playing;
+    playing.mix = new QProcess(this);
+    // No fallback: without the mix, the sound must fail rather than play
+    // out of the speakers instead of into the call.
+    playing.mix->start("pw-play", {"--target", Chain::MixName, "--volume", level,
+                                   "-P", "{ node.dont-fallback = true node.dont-reconnect = true "
+                                         "node.description = \"Vox soundboard\" }",
+                                   file});
+    if (monitor) {
+        playing.monitor = new QProcess(this);
+        playing.monitor->start("pw-play", {"--volume", level, "-P", "{ node.description = \"Vox soundboard (you)\" }", file});
+    }
+    connect(playing.mix, &QProcess::finished, this, [this, id, process = playing.mix](int code, QProcess::ExitStatus) {
+        process->deleteLater();
+        const auto it = m_playing.find(id);
+        if (it == m_playing.end() || it->mix != process)
+            return;
+        const bool ok = it->stopped || code == 0;
+        // A sound that never reached the mix shouldn't keep playing to the
+        // user alone, as if it worked.
+        if (!ok && it->monitor)
+            it->monitor->kill();
+        m_playing.erase(it);
+        emit soundFinished(id, ok);
+    });
+    connect(playing.mix, &QProcess::errorOccurred, this, [this, id, process = playing.mix](QProcess::ProcessError error) {
+        if (error != QProcess::FailedToStart)
+            return;
+        process->deleteLater();
+        if (m_playing.value(id).mix == process) {
+            if (QProcess *other = m_playing.value(id).monitor)
+                other->kill();
+            m_playing.remove(id);
+        }
+        emit failed(tr("%1 is not installed.").arg("pw-play"));
+        emit soundFinished(id, false);
+    });
+    if (playing.monitor)
+        connect(playing.monitor, &QProcess::finished, playing.monitor, &QObject::deleteLater);
+    m_playing.insert(id, playing);
+}
+
+void PipeWireAudio::stopSound(const QString &id) {
+    auto it = m_playing.find(id);
+    if (it == m_playing.end())
+        return;
+    it->stopped = true;
+    for (QProcess *process : {it->mix, it->monitor})
+        if (process && process->state() != QProcess::NotRunning)
+            process->terminate();
 }

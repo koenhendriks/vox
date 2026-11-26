@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QTimer>
 #include <QVariantList>
+#include <functional>
 
 #include "audiosystem.h"
 #include "config.h"
@@ -57,6 +58,13 @@ public:
     bool canRedo() const { return !m_redo.isEmpty(); }
 
     const Config &config() const { return m_config; }
+    // False while the config file couldn't be read, when nothing may delete
+    // what it might still refer to.
+    bool configReadable() const { return m_loadError.isEmpty(); }
+    // Lets the soundboard change its part of the config, saved like any
+    // other change and, when `undoable`, undone with Ctrl+Z.
+    void changeConfig(const std::function<void(Config &)> &change, bool undoable = true);
+    void reportError(const QString &message) { setError(message); }
 
     // Marks the start of one undoable change, such as pressing a slider.
     Q_INVOKABLE void beginEdit();

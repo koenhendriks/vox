@@ -16,7 +16,7 @@ license=('MIT')
 # pipewire-audio goes before x42-plugins-lv2: it provides the lv2-host that
 # x42 asks for, so pacman doesn't pick another provider, such as Audacity.
 depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-svg' 'qt6-wayland' 'pipewire' 'pipewire-audio'
-         'pipewire-pulse' 'libpulse' 'swh-plugins' 'noise-suppression-for-voice' 'x42-plugins-lv2')
+         'pipewire-pulse' 'libpulse' 'swh-plugins' 'noise-suppression-for-voice' 'x42-plugins-lv2' 'ffmpeg')
 makedepends=('gcc' 'make' 'git')
 _src="$(realpath "$startdir/..")"
 source=()

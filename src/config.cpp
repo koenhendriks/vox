@@ -135,7 +135,18 @@ QJsonObject Config::toJson() const {
     QJsonArray list;
     for (const auto &profile : profiles)
         list.append(profile.toJson());
-    return {{"microphone", microphone}, {"active", active}, {"profiles", list}};
+    QJsonObject object{{"microphone", microphone}, {"active", active},           {"profiles", list},
+                       {"soundVolume", soundVolume}, {"soundMonitor", soundMonitor}};
+    // Written only once the soundboard is set up: an empty list means the
+    // user removed every sound, so a config saved before then, by `vox use`
+    // for one, must not say that.
+    if (soundsKnown) {
+        QJsonArray soundList;
+        for (const auto &sound : sounds)
+            soundList.append(QJsonObject{{"name", sound.name}, {"file", sound.file}});
+        object.insert("sounds", soundList);
+    }
+    return object;
 }
 
 Config Config::fromJson(const QJsonObject &object) {
@@ -149,7 +160,35 @@ Config Config::fromJson(const QJsonObject &object) {
     if (config.profiles.isEmpty())
         config.profiles = Profile::presets();
     config.active = std::clamp(object.value("active").toInt(), 0, int(config.profiles.size()) - 1);
+    config.soundsKnown = object.contains("sounds");
+    for (const auto &value : object.value("sounds").toArray()) {
+        const QJsonObject sound = value.toObject();
+        const QString file = sound.value("file").toString();
+        // Only plain names inside the sounds directory: a hand-edited
+        // "../" must not point Vox at files it doesn't own.
+        if (file.isEmpty() || file.contains('/') || file.startsWith('.'))
+            continue;
+        config.sounds.append({sound.value("name").toString(file).trimmed(), file});
+    }
+    config.soundVolume = std::clamp(object.value("soundVolume").toDouble(80), 0.0, 100.0);
+    config.soundMonitor = object.value("soundMonitor").toBool(true);
     return config;
+}
+
+QString Config::defaultSoundsDirectory() {
+    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/vox/sounds";
+}
+
+int Config::findSound(const QString &nameOrNumber) const {
+    const QString wanted = nameOrNumber.trimmed();
+    bool isNumber = false;
+    const int number = wanted.toInt(&isNumber);
+    if (isNumber)
+        return number >= 1 && number <= sounds.size() ? number - 1 : -1;
+    for (int i = 0; i < sounds.size(); ++i)
+        if (sounds[i].name.compare(wanted, Qt::CaseInsensitive) == 0)
+            return i;
+    return -1;
 }
 
 Config Config::load(const QString &path, QString *error) {

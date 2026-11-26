@@ -6,9 +6,11 @@ import QtQuick.Layouts
 Dialog {
     id: dialog
     property int index: 0
+    // "profile" or "sound"
+    property string kind: "profile"
     property string error
 
-    title: qsTr("Rename profile")
+    title: kind === "sound" ? qsTr("Rename sound") : qsTr("Rename profile")
     modal: true
     width: 380
     Material.roundedScale: theme.radius
@@ -16,13 +18,14 @@ Dialog {
 
     onAboutToShow: {
         error = ""
-        field.text = backend.profileNames[index] ?? ""
+        field.text = kind === "sound" ? (soundboard.sounds[index]?.name ?? "") : (backend.profileNames[index] ?? "")
         field.selectAll()
         field.forceActiveFocus()
     }
     // Ok only closes the dialog when the name was taken.
     onAccepted: {
-        const problem = backend.renameProfile(index, field.text)
+        const problem = kind === "sound" ? soundboard.rename(index, field.text)
+                                         : backend.renameProfile(index, field.text)
         if (problem.length) {
             error = problem
             open()

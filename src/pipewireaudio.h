@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QHash>
 #include <QProcess>
 #include <QStringList>
 
@@ -26,6 +27,9 @@ public:
     void finish() override;
     void startCapture(const QStringList &targets) override;
     void stopCapture() override;
+    void importSound(const QString &id, const QString &source, const QString &target) override;
+    void playSound(const QString &id, const QString &file, double volume, bool monitor) override;
+    void stopSound(const QString &id) override;
 
     static QStringList applyArguments(const QString &pod);
     static AudioStatus parseStatus(const QByteArray &systemctlShow, const QByteArray &defaultSource,
@@ -39,6 +43,12 @@ private:
     QString m_pendingPod;
     bool m_applying = false;
     bool m_refreshing = false;
+    struct Playing {
+        QProcess *mix = nullptr;
+        QProcess *monitor = nullptr;
+        bool stopped = false;
+    };
+    QHash<QString, Playing> m_playing;
     QList<QProcess *> m_captures;
     QList<QByteArray> m_captureData;
     QProcess m_loopback;

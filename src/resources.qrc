@@ -7,10 +7,15 @@
         <file alias="LevelMeter.qml">LevelMeter.qml</file>
         <file alias="ProfileList.qml">ProfileList.qml</file>
         <file alias="RenameDialog.qml">RenameDialog.qml</file>
+        <file alias="SoundboardPanel.qml">SoundboardPanel.qml</file>
         <file alias="TestPanel.qml">TestPanel.qml</file>
         <file alias="Tray.qml">Tray.qml</file>
         <file alias="WaveformTrack.qml">WaveformTrack.qml</file>
         <file alias="skill.md">skill.md</file>
+        <file alias="sounds/air-horn.flac">sounds/air-horn.flac</file>
+        <file alias="sounds/applause.flac">sounds/applause.flac</file>
+        <file alias="sounds/rimshot.flac">sounds/rimshot.flac</file>
+        <file alias="sounds/sad-trombone.flac">sounds/sad-trombone.flac</file>
         <file alias="i18n/en.json">i18n/en.json</file>
         <file alias="i18n/nl.json">i18n/nl.json</file>
         <file alias="i18n/de.json">i18n/de.json</file>

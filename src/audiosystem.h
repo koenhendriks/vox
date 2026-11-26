@@ -46,12 +46,23 @@ public:
     // which emits captured() with one buffer per target in the same order.
     virtual void startCapture(const QStringList &targets) = 0;
     virtual void stopCapture() = 0;
+    // Converts any audio file into a loudness-normalised mono FLAC at
+    // `target`, then reports with soundImported() under the same id.
+    virtual void importSound(const QString &id, const QString &source, const QString &target) = 0;
+    // Plays `file` into the soundboard mix, and to the default output as well
+    // when `monitor`, at `volume` from 0 to 1; soundFinished() when it ends.
+    virtual void playSound(const QString &id, const QString &file, double volume, bool monitor) = 0;
+    virtual void stopSound(const QString &id) = 0;
 
 signals:
     void statusChanged(const AudioStatus &status);
     void levels(double microphone, double vox);
     void listeningChanged(bool listening);
     void captured(const QList<QByteArray> &buffers);
+    void soundImported(const QString &id, bool ok, const QString &error);
+    // `ok` is false when the sound couldn't reach the mix, such as with the
+    // Vox Microphone off; a stopped sound counts as ok.
+    void soundFinished(const QString &id, bool ok);
     // A command failed in a way the user needs to know about.
     void failed(const QString &message);
 };
