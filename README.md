@@ -94,8 +94,10 @@ a sad trombone, synthesised for Vox.
 Drop audio files onto the soundboard, or press **+**, to add your own: any
 format ffmpeg reads, even the sound track of a video. Vox converts a copy into
 `~/.local/share/vox/sounds` at the same loudness as the others and never
-touches your file. Right-click a sound to rename or remove it; Ctrl+Z brings a
-removed one back. **⋯** sets the volume and whether you hear the sounds
+touches your file. To swap a sound's audio but keep its name, place and
+Ctrl+number, drop a file onto that sound, or right-click it and pick
+**Replace…**. Right-click also renames or removes a sound; Ctrl+Z undoes any
+of these. **⋯** sets the volume and whether you hear the sounds
 yourself.
 
 Sounds join your voice after noise removal and auto-tune, which would

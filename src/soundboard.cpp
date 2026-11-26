@@ -7,6 +7,7 @@
 #include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QUrl>
+#include <utility>
 
 #include "audiosystem.h"
 #include "backend.h"
@@ -38,6 +39,11 @@ Soundboard::Soundboard(AudioSystem *audio, Backend *backend, FilePicker *picker,
     connect(m_backend, &Backend::configChanged, this, &Soundboard::soundsChanged);
     if (m_picker) {
         connect(m_picker, &FilePicker::picked, this, [this](const QStringList &paths) {
+            const QString replaces = std::exchange(m_choosingFor, {});
+            if (!replaces.isEmpty()) {
+                import(paths.value(0), replaces);
+                return;
+            }
             QVariantList files;
             for (const auto &path : paths)
                 files << path;
@@ -144,42 +150,76 @@ QString Soundboard::nameFromFile(const QString &path) {
     return name.isEmpty() ? tr("Sound") : name;
 }
 
+static QString localPath(const QVariant &value) {
+    const QUrl url = value.toUrl();
+    return url.isLocalFile() ? url.toLocalFile() : value.toString();
+}
+
 void Soundboard::add(const QVariantList &files) {
-    for (const auto &value : files) {
-        const QUrl url = value.toUrl();
-        const QString path = url.isLocalFile() ? url.toLocalFile() : value.toString();
-        if (!QFileInfo(path).isFile())
-            continue;
-        // A fresh name for every import, so two files with the same name, or
-        // the same file twice, never overwrite each other.
-        QString stem = QFileInfo(path).completeBaseName().toLower();
-        stem.replace(QRegularExpression("[^a-z0-9]+"), "-");
-        stem = stem.left(40);
-        const QString file = QString("%1-%2.flac").arg(stem.isEmpty() ? "sound" : stem)
-                                 .arg(QRandomGenerator::global()->generate() & 0xffffff, 6, 16, QChar('0'));
-        m_imports.insert(file, nameFromFile(path));
-        emit importingChanged();
-        m_audio->importSound(file, path, m_directory + "/" + file);
-    }
+    for (const auto &value : files)
+        import(localPath(value), {});
+}
+
+void Soundboard::replace(int index, const QVariant &file) {
+    const auto &sounds = m_backend->config().sounds;
+    if (index >= 0 && index < sounds.size())
+        import(localPath(file), sounds[index].file);
+}
+
+void Soundboard::chooseReplacement(int index) {
+    const auto &sounds = m_backend->config().sounds;
+    if (!m_picker || index < 0 || index >= sounds.size())
+        return;
+    m_choosingFor = sounds[index].file;
+    m_picker->openFiles(tr("Replace %1").arg(sounds[index].name), "audio/*");
+}
+
+void Soundboard::import(const QString &path, const QString &replaces) {
+    if (!QFileInfo(path).isFile())
+        return;
+    // A fresh name for every import, so two files with the same name, or the
+    // same file twice, never overwrite each other, and a replaced sound's old
+    // file stays for undo.
+    QString stem = QFileInfo(path).completeBaseName().toLower();
+    stem.replace(QRegularExpression("[^a-z0-9]+"), "-");
+    stem = stem.left(40);
+    const QString file = QString("%1-%2.flac").arg(stem.isEmpty() ? "sound" : stem)
+                             .arg(QRandomGenerator::global()->generate() & 0xffffff, 6, 16, QChar('0'));
+    m_imports.insert(file, {nameFromFile(path), replaces});
+    emit importingChanged();
+    m_audio->importSound(file, path, m_directory + "/" + file);
 }
 
 void Soundboard::imported(const QString &id, bool ok, const QString &error) {
-    const QString name = m_imports.take(id);
-    emit importingChanged();
-    if (name.isEmpty())
+    if (!m_imports.contains(id))
         return;
+    const Import pending = m_imports.take(id);
+    const QString &name = pending.name;
+    emit importingChanged();
     if (!ok) {
         m_backend->reportError(error.isEmpty() ? tr("Couldn't add %1 as a sound.").arg(name)
                                                : tr("Couldn't add %1 as a sound: %2").arg(name, error));
         return;
     }
     m_backend->changeConfig([&](Config &config) {
-        config.sounds.append({name, id});
         config.soundsKnown = true;
+        for (auto &sound : config.sounds) {
+            if (!pending.replaces.isEmpty() && sound.file == pending.replaces) {
+                if (m_playing.contains(sound.file))
+                    m_audio->stopSound(sound.file);
+                sound.file = id;
+                return;
+            }
+        }
+        // Not replacing, or the sound was removed while its new file was
+        // being converted: it becomes a sound of its own.
+        config.sounds.append({name, id});
     });
 }
 
 void Soundboard::choose() {
+    // A replacement the user cancelled must not turn this into one.
+    m_choosingFor.clear();
     if (m_picker)
         m_picker->openFiles(tr("Add sounds"), "audio/*");
 }

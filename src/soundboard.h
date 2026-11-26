@@ -37,6 +37,9 @@ public:
     // File paths or file:// URLs, as a drop or the file chooser gives them.
     Q_INVOKABLE void add(const QVariantList &files);
     Q_INVOKABLE void choose();
+    // Gives a sound new audio, keeping its name, place and shortcut.
+    Q_INVOKABLE void replace(int index, const QVariant &file);
+    Q_INVOKABLE void chooseReplacement(int index);
     // Returns an empty string on success, or why the name can't be used.
     Q_INVOKABLE QString rename(int index, const QString &name);
     Q_INVOKABLE void remove(int index);
@@ -52,12 +55,20 @@ signals:
 private:
     void setUp();
     void imported(const QString &id, bool ok, const QString &error);
+    void import(const QString &path, const QString &replaces);
     void finished(const QString &id, bool ok);
 
     AudioSystem *m_audio;
     Backend *m_backend;
     FilePicker *m_picker;
     QString m_directory;
-    QSet<QString> m_playing;            // by file
-    QHash<QString, QString> m_imports;  // file being written -> its name
+    struct Import {
+        QString name;
+        QString replaces;  // the file of the sound it replaces, if any
+    };
+    QSet<QString> m_playing;           // by file
+    QHash<QString, Import> m_imports;  // by the file being written
+    // What the open file chooser is for: a sound's file to replace, or
+    // empty to add new sounds.
+    QString m_choosingFor;
 };

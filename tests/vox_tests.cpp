@@ -14,6 +14,7 @@
 #include "fakeaudio.h"
 #include "meter.h"
 #include "pipewireaudio.h"
+#include "filepicker.h"
 #include "soundboard.h"
 #include "player.h"
 #include "take.h"
@@ -330,6 +331,59 @@ private slots:
         QVERIFY(board.rename(starters, "12").length() > 0);
         QCOMPARE(board.rename(starters, "Horn"), QString());
         QCOMPARE(board.sounds().last().toMap().value("name").toString(), QString("Horn"));
+    }
+
+    void soundboardReplacesASoundInPlace()
+    {
+        QTemporaryDir dir;
+        FakeAudio audio;
+        Backend backend(&audio, dir.filePath("config.json"), plugins(dir));
+        Soundboard board(&audio, &backend, nullptr, dir.filePath("sounds"));
+        const QVariantMap before = board.sounds().at(1).toMap();
+        const int count = board.sounds().size();
+        write(dir.filePath("real-applause.wav"), "pretend audio");
+
+        board.replace(1, QUrl::fromLocalFile(dir.filePath("real-applause.wav")));
+        const QVariantMap after = board.sounds().at(1).toMap();
+        QCOMPARE(board.sounds().size(), count);
+        QCOMPARE(after.value("name"), before.value("name"));
+        QVERIFY(after.value("file") != before.value("file"));
+        QVERIFY(QFile::exists(dir.filePath("sounds/" + after.value("file").toString())));
+
+        // The old audio stays on disk until the next start, so undo works.
+        backend.undo();
+        QCOMPARE(board.sounds().at(1).toMap().value("file"), before.value("file"));
+        QVERIFY(QFile::exists(dir.filePath("sounds/" + before.value("file").toString())));
+    }
+
+    void cancelledReplacementDoesNotHijackAdding()
+    {
+        class Picker : public FilePicker {
+        public:
+            QStringList next;
+            void openFiles(const QString &, const QString &) override {
+                if (!next.isEmpty())
+                    emit picked(next);
+            }
+        } picker;
+        QTemporaryDir dir;
+        FakeAudio audio;
+        Backend backend(&audio, dir.filePath("config.json"), plugins(dir));
+        Soundboard board(&audio, &backend, &picker, dir.filePath("sounds"));
+        const int count = board.sounds().size();
+        const QString horn = board.sounds().at(0).toMap().value("file").toString();
+
+        board.chooseReplacement(0);   // the user cancels: nothing is picked
+        write(dir.filePath("kazoo.ogg"), "pretend audio");
+        picker.next = {dir.filePath("kazoo.ogg")};
+        board.choose();               // then adds a sound with +
+        QCOMPARE(board.sounds().size(), count + 1);
+        QCOMPARE(board.sounds().at(0).toMap().value("file").toString(), horn);
+        QCOMPARE(board.sounds().last().toMap().value("name").toString(), QString("Kazoo"));
+
+        board.chooseReplacement(0);   // and this time picks one
+        QCOMPARE(board.sounds().size(), count + 1);
+        QVERIFY(board.sounds().at(0).toMap().value("file").toString() != horn);
     }
 
     void soundboardReportsAFailedImport()

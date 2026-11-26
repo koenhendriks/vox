@@ -155,5 +155,7 @@
   "The file chooser couldn't open: %1": "Die Dateiauswahl konnte nicht geöffnet werden: %1",
   "Turn on the Vox Microphone to play sounds into your calls.": "Schalte das Vox Microphone ein, um Sounds in deine Anrufe zu spielen.",
   "Volume": "Lautstärke",
-  "ffmpeg is not installed.": "ffmpeg ist nicht installiert."
+  "ffmpeg is not installed.": "ffmpeg ist nicht installiert.",
+  "Replace…": "Ersetzen…",
+  "Replace %1": "%1 ersetzen"
 }

@@ -77,9 +77,18 @@ Rectangle {
 
                 Popup {
                     id: settings
+                    objectName: "soundSettings"
                     y: parent.height
                     x: parent.width - width
+                    // Kept inside the window: the soundboard sits at its left
+                    // edge, so opening leftwards would run off the screen.
+                    margins: 8
                     width: 240
+                    background: Rectangle {
+                        color: "#202024"
+                        border.color: "#34343b"
+                        radius: theme.radius
+                    }
                     padding: 14
                     Material.roundedScale: theme.radius
                     ColumnLayout {
@@ -191,6 +200,26 @@ Rectangle {
                         }
                     }
                 }
+                // A file dropped on a sound replaces it; dropped anywhere else
+                // on the soundboard, it's added.
+                DropArea {
+                    id: tileDrop
+                    anchors.fill: parent
+                    onEntered: event => event.accepted = event.hasUrls
+                    onDropped: event => {
+                        soundboard.replace(tile.index, event.urls[0])
+                        event.acceptProposedAction()
+                    }
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 1
+                    visible: tileDrop.containsDrag
+                    color: "transparent"
+                    border.color: theme.accent
+                    border.width: 2
+                    radius: Math.min(4, theme.radius)
+                }
                 MouseArea {
                     id: mouse
                     anchors.fill: parent
@@ -206,6 +235,10 @@ Rectangle {
                 Menu {
                     id: menu
                     Material.roundedScale: theme.radius
+                    MenuItem {
+                        text: qsTr("Replace…")
+                        onTriggered: soundboard.chooseReplacement(tile.index)
+                    }
                     MenuItem {
                         text: qsTr("Rename")
                         onTriggered: panel.renameRequested(tile.index)

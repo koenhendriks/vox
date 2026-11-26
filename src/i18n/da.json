@@ -155,5 +155,7 @@
   "The file chooser couldn't open: %1": "Filvælgeren kunne ikke åbne: %1",
   "Turn on the Vox Microphone to play sounds into your calls.": "Tænd Vox Microphone for at afspille lyde i dine opkald.",
   "Volume": "Lydstyrke",
-  "ffmpeg is not installed.": "ffmpeg er ikke installeret."
+  "ffmpeg is not installed.": "ffmpeg er ikke installeret.",
+  "Replace…": "Erstat…",
+  "Replace %1": "Erstat %1"
 }

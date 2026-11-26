@@ -155,5 +155,7 @@
   "The file chooser couldn't open: %1": "De bestandskiezer kon niet openen: %1",
   "Turn on the Vox Microphone to play sounds into your calls.": "Zet de Vox Microphone aan om geluiden in je gesprekken af te spelen.",
   "Volume": "Volume",
-  "ffmpeg is not installed.": "ffmpeg is niet geïnstalleerd."
+  "ffmpeg is not installed.": "ffmpeg is niet geïnstalleerd.",
+  "Replace…": "Vervangen…",
+  "Replace %1": "%1 vervangen"
 }
