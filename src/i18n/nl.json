@@ -157,5 +157,6 @@
   "Volume": "Volume",
   "ffmpeg is not installed.": "ffmpeg is niet geïnstalleerd.",
   "Replace…": "Vervangen…",
-  "Replace %1": "%1 vervangen"
+  "Replace %1": "%1 vervangen",
+  "It's only silence.": "Het is alleen stilte."
 }

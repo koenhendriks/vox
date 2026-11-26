@@ -157,5 +157,6 @@
   "Volume": "Lautstärke",
   "ffmpeg is not installed.": "ffmpeg ist nicht installiert.",
   "Replace…": "Ersetzen…",
-  "Replace %1": "%1 ersetzen"
+  "Replace %1": "%1 ersetzen",
+  "It's only silence.": "Es ist nur Stille."
 }

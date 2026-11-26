@@ -386,6 +386,20 @@ private slots:
         QVERIFY(board.sounds().at(0).toMap().value("file").toString() != horn);
     }
 
+    void importTrimsSilenceBeforeNormalising()
+    {
+        const QStringList arguments = PipeWireAudio::importArguments("in.mp3", "out.flac.part");
+        const QString filters = arguments.at(arguments.indexOf("-af") + 1);
+        QCOMPARE(filters.count("silenceremove="), 2);
+        QCOMPARE(filters.count("areverse"), 2);
+        // Trim, then measure loudness: silence mustn't count towards it.
+        QVERIFY(filters.lastIndexOf("silenceremove") < filters.indexOf("loudnorm"));
+        // Unpadded, or the trimmed end gets silence put back.
+        QVERIFY(filters.contains("asetnsamples=n=4096:p=0"));
+        QCOMPARE(arguments.last(), QString("out.flac.part"));
+        QCOMPARE(arguments.at(arguments.indexOf("-i") + 1), QString("in.mp3"));
+    }
+
     void soundboardReportsAFailedImport()
     {
         QTemporaryDir dir;

@@ -242,14 +242,7 @@ void PipeWireAudio::importSound(const QString &id, const QString &source, const 
         emit soundImported(id, false, tr("ffmpeg is not installed."));
         process->deleteLater();
     });
-    connect(process, &QProcess::finished, this, [this, process, id, partial, target](int code, QProcess::ExitStatus status) {
-        process->deleteLater();
-        if (status != QProcess::NormalExit || code != 0) {
-            QFile::remove(partial);
-            const QStringList lines = QString::fromUtf8(process->readAllStandardError()).trimmed().split('\n');
-            emit soundImported(id, false, lines.isEmpty() ? QString() : lines.last().trimmed());
-            return;
-        }
+    auto save = [this, id, partial, target] {
         QFile::remove(target);
         if (!QFile::rename(partial, target)) {
             QFile::remove(partial);
@@ -257,13 +250,60 @@ void PipeWireAudio::importSound(const QString &id, const QString &source, const 
             return;
         }
         emit soundImported(id, true, {});
+    };
+    connect(process, &QProcess::finished, this, [this, process, id, partial, save](int code, QProcess::ExitStatus status) {
+        process->deleteLater();
+        if (status != QProcess::NormalExit || code != 0) {
+            QFile::remove(partial);
+            const QStringList lines = QString::fromUtf8(process->readAllStandardError()).trimmed().split('\n');
+            emit soundImported(id, false, lines.isEmpty() ? QString() : lines.last().trimmed());
+            return;
+        }
+        // A file that was all silence comes out of the trim with no audio
+        // at all, which ffmpeg counts as success; it mustn't become a button
+        // that plays nothing.
+        auto *probe = new QProcess(this);
+        connect(probe, &QProcess::finished, this, [this, probe, id, partial, save](int, QProcess::ExitStatus) {
+            probe->deleteLater();
+            bool ok = false;
+            const double seconds = QString::fromUtf8(probe->readAllStandardOutput()).trimmed().toDouble(&ok);
+            if (!ok || seconds < 0.05) {
+                QFile::remove(partial);
+                emit soundImported(id, false, tr("It's only silence."));
+                return;
+            }
+            save();
+        });
+        // Without ffprobe the check is skipped rather than the sound refused.
+        connect(probe, &QProcess::errorOccurred, this, [probe, save](QProcess::ProcessError error) {
+            if (error != QProcess::FailedToStart)
+                return;
+            probe->deleteLater();
+            save();
+        });
+        probe->start("ffprobe", {"-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", partial});
     });
-    // Loudness-normalised to the starter sounds' level, so a horn found on
-    // the web isn't ten times louder than the voice it plays over. loudnorm
-    // emits one huge block on short input, which the FLAC encoder refuses.
-    process->start("ffmpeg", {"-hide_banner", "-loglevel", "error", "-y", "-i", source, "-vn", "-ac", "1",
-                              "-af", "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000,asetnsamples=n=4096",
-                              "-ar", "48000", "-c:a", "flac", "-f", "flac", partial});
+    process->start("ffmpeg", importArguments(source, partial));
+}
+
+QStringList PipeWireAudio::importArguments(const QString &source, const QString &target) {
+    // Silence is trimmed from the start, then from the end by trimming the
+    // reversed audio, keeping a little before the sound and a little of its
+    // tail so neither cut clicks. -50 dBFS sits below speech and music but
+    // above room hiss. Trimming comes before loudness normalisation, so the
+    // silence doesn't count towards the loudness.
+    const QString trim = "silenceremove=start_periods=1:start_threshold=-50dB:start_silence=%1:detection=peak";
+    const QStringList filters{
+        trim.arg("0.02"), "areverse", trim.arg("0.08"), "areverse",
+        // Loudness-normalised to the starter sounds' level, so a horn found
+        // on the web isn't ten times louder than the voice it plays over.
+        "loudnorm=I=-16:TP=-1.5:LRA=11", "aresample=48000",
+        // loudnorm emits one huge block on short input, which the FLAC
+        // encoder refuses; p=0, or the last block is padded with silence.
+        "asetnsamples=n=4096:p=0",
+    };
+    return {"-hide_banner", "-loglevel", "error", "-y", "-i", source, "-vn", "-ac", "1",
+            "-af", filters.join(','), "-ar", "48000", "-c:a", "flac", "-f", "flac", target};
 }
 
 void PipeWireAudio::playSound(const QString &id, const QString &file, double volume, bool monitor) {

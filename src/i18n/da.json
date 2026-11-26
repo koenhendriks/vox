@@ -157,5 +157,6 @@
   "Volume": "Lydstyrke",
   "ffmpeg is not installed.": "ffmpeg er ikke installeret.",
   "Replace…": "Erstat…",
-  "Replace %1": "Erstat %1"
+  "Replace %1": "Erstat %1",
+  "It's only silence.": "Det er kun stilhed."
 }

@@ -32,6 +32,9 @@ public:
     void stopSound(const QString &id) override;
 
     static QStringList applyArguments(const QString &pod);
+    // ffmpeg's arguments to turn any audio file into a sound: silence
+    // trimmed, loudness normalised, mono 48 kHz FLAC.
+    static QStringList importArguments(const QString &source, const QString &target);
     static AudioStatus parseStatus(const QByteArray &systemctlShow, const QByteArray &defaultSource,
                                    const QByteArray &sourcesJson);
 
