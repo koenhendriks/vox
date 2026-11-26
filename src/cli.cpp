@@ -280,8 +280,11 @@ int effects(const QString &how, bool json) {
 // an older copy; OpenDeck picks it up when it next starts.
 int installOpenDeckPlugin(bool json) {
     const QString config = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/opendeck";
-    if (!QFileInfo::exists(config))
-        return fail(tr("OpenDeck isn't set up here (no %1). Open OpenDeck once, then try again.").arg(config), json);
+    // OpenDeck makes its folder on its first start; a setup script can run
+    // before that, so an installed OpenDeck is enough, and finds the plugin
+    // waiting when it first starts.
+    if (!QFileInfo::exists(config) && QStandardPaths::findExecutable("opendeck").isEmpty())
+        return fail(tr("OpenDeck isn't installed here."), json);
     const QString target = config + "/plugins/" + OpenDeckPlugin::Uuid + ".sdPlugin";
     QDir(target).removeRecursively();
     QDirIterator files(":/opendeck", QDir::Files, QDirIterator::Subdirectories);
